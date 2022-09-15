@@ -101,8 +101,7 @@ class BaseTelegaModelForm(BaseTelegaForm, BaseModelForm):
         # self.error_class = TelegaErrorList
 
         self.next_field = None
-        if instance is None:
-            self.fields, self.next_field = self._init_helper_fields_detection(data)
+        self.fields, self.next_field = self._init_helper_fields_detection(data)
 
     def save(self, commit=True):
         # import pdb; pdb.set_trace()

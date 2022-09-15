@@ -45,6 +45,8 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
     command_routing_show_list = 'sl'
 
     WRITE_MESSAGE_VARIANT_SYMBOLS = '!WMVS!'
+    NONE_VARIANT_SYMBOLS = '!NoneNULL!'
+
     CHAT_ACTION_MESSAGE = 'message'
 
     telega_form = None
@@ -52,10 +54,12 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
     viewset_name = ''
 
     prechoice_fields_values = {}
+
     updating_fields = None
+    show_cancel_updating_button = True
 
     cancel_adding_button = None
-    show_cancel_updating_button = True
+    use_name_and_id_in_elem_showing = True
 
     # on_created_success_action = None
     # cancel_action = None
@@ -68,10 +72,10 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
     def get_utrl_params(self, utrl):
         return utrl.split('-')
 
-    def __init__(self, prefix):
-        self.user = None
-        self.bot = None
-        self.update = None
+    def __init__(self, prefix, user=None, bot=None, update=None):
+        self.user = user
+        self.bot = bot
+        self.update = update
         self.form = None
 
         self.viewset_routing = {}
@@ -148,23 +152,22 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             data = copy.deepcopy(initial_data)
 
         if func_response == 'change' and instance:
-            if (not value is None) or (not self.update.message is None):
-                for model_field in self.telega_form.base_fields:
-                    if hasattr(instance, model_field):
-                        data[model_field] = getattr(instance, model_field)
-                        if issubclass(type(data[model_field]), models.Manager):
-                            data[model_field] = data[model_field].all()
-                    else:
-                        raise ValueError('fields in Telegamodelform should have same name')
-
-                data.pop(field, None)
-
+            for model_field in self.telega_form.base_fields:
+                if hasattr(instance, model_field):
+                    data[model_field] = getattr(instance, model_field)
+                    if issubclass(type(data[model_field]), models.Manager):
+                        data[model_field] = data[model_field].all()
+                else:
+                    raise ValueError('fields in Telegamodelform should have same name')
+            data.pop(field, None)
 
         want_write_self_variant = False
         if (type(field) == str) and field:
             if value:
                 if value == self.WRITE_MESSAGE_VARIANT_SYMBOLS:
                     want_write_self_variant = True
+                elif value == self.NONE_VARIANT_SYMBOLS:
+                    data[field] = None
                 else:
                     data[field] = check_if_multichoice_and_get_value(value)
             elif self.update.message:
@@ -183,11 +186,12 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         form = self.form
         if not want_write_self_variant:
             if form.is_valid():
-                if form.next_field:
+                if not ((func_response == 'update') and (value is None) and (self.update.message is None)):
                     form.save()
+
+                if form.next_field:
                     res = self.generate_message_next_field(form.next_field, func_response=func_response, instance_id=instance_id)
                 else:
-                    form.save()
                     if func_response == 'create':
                         res = self.generate_message_success_created(self.form.instance.id)
                     else:
@@ -218,10 +222,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         self.user.clear_status(commit=True)
 
         if model:
-            if (not value is None) or (not self.update.message is None):
-                return self.create_or_update_helper(field, value, func_response='change', instance=model)
-            else:
-                return self.generate_message_next_field(field, func_response='change', instance_id=model.id)
+            return self.create_or_update_helper(field, value, func_response='change', instance=model)
         else:
             return self.generate_message_no_elem(model_id)
 
@@ -337,7 +338,8 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         model = self.get_queryset().filter(id=model_id).first()
 
         if model:
-            mess += f'{self.viewset_name} #{model_id} \n'
+            if self.use_name_and_id_in_elem_showing:
+                mess += f'{self.viewset_name} #{model_id} \n'
             mess += self.generate_show_fields(model)
 
             buttons = self.generate_elem_buttons(model_id)
@@ -346,7 +348,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         else:
             return self.generate_message_no_elem(model_id)
 
-    def show_list(self, page=0, per_page=10, columns=1, use_name_and_id=True):
+    def show_list(self, page=0, per_page=10, columns=1):
         """show list items"""
 
         # import pdb;pdb.set_trace()
@@ -384,7 +386,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
 
         if len(models):
             for it_m, model in enumerate(models, page * per_page * columns + 1):
-                mess += f'{it_m}. {self.viewset_name} #{model.id}\n' if use_name_and_id else f'{it_m}. '
+                mess += f'{it_m}. {self.viewset_name} #{model.id}\n' if self.use_name_and_id_in_elem_showing else f'{it_m}. '
                 mess += self.generate_show_fields(model)
                 mess += '\n\n'
                 buttons += [
