@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TeleDeepLink, ActionLog, Trigger, UserTrigger, BotMenuElem
+from .models import TeleDeepLink, ActionLog, Trigger, UserTrigger, BotMenuElem, BotMenuElemAttrText
 from .admin_utils import CustomRelatedOnlyDropdownFilter, DefaultOverrideAdminWidgetsForm
 from django.db.models import Count, Q
 
@@ -54,6 +54,14 @@ class BotMenuElemAdmin(admin.ModelAdmin):
     search_fields = ('command', 'callbacks_db', 'message', 'buttons_db',)
     list_filter = ('is_visable', 'empty_block')
     form = BotMenuElemAdminForm
+
+
+@admin.register(BotMenuElemAttrText)
+class BotMenuElemAttrTextAdmin(admin.ModelAdmin):
+    list_display = ('id', 'dttm_added', 'language_code', 'default_text', 'translated_text')
+    search_fields = ('default_text', 'translated_text')
+    list_filter = ('language_code', 'bot_menu_elem')
+
 
 
 class TriggerAdminForm(DefaultOverrideAdminWidgetsForm):

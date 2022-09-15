@@ -10,6 +10,8 @@ from django.conf import settings
 from django.db.models import QuerySet
 from django.core.serializers.json import DjangoJSONEncoder
 import datetime
+from django.utils.translation import gettext_lazy as _
+from telegram import InlineKeyboardButton  # no lazy text so standart possible to use
 
 
 class TelegramDjangoJsonDecoder(json.JSONDecoder):
@@ -43,13 +45,13 @@ class MESSAGE_FORMAT:
     GROUP_MEDIA = 'GM'
 
     MESSAGE_FORMATS = (
-        (TEXT, 'текст'),
-        (PHOTO, 'фото'),
-        (DOCUMENT, 'документ'),
-        (AUDIO, 'аудио'),
-        (VIDEO, 'видео'),
-        (GIF, 'гифка/анимация'),
-        (GROUP_MEDIA, 'группа медиа'),
+        (TEXT, _('Text')),
+        (PHOTO, _('Image')),
+        (DOCUMENT, _('Document')),
+        (AUDIO, _('Audio')),
+        (VIDEO, _('Video')),
+        (GIF, _('GIF/animation')),
+        (GROUP_MEDIA, _('Media Group')),
     )
 
 
@@ -83,6 +85,7 @@ class TelegramUser(AbstractUser):
     id = models.BigIntegerField(primary_key=True)  # telegram id is id for models
     seed_code = models.IntegerField(default=_seed_code)
     telegram_username = models.CharField(max_length=64, null=True, blank=True)
+    telegram_language_code = models.CharField(max_length=2, default='en')
 
     timezone = models.DurationField(default=timezone.timedelta(hours=3))
 
@@ -128,7 +131,7 @@ class TelegramUser(AbstractUser):
         self.current_utrl_form_db = json.dumps({
             'form_name': form_name,
             'form_data': db_form_data,
-        })
+        }, cls=DjangoJSONEncoder)
         if do_save:
             self.save()
 
@@ -143,20 +146,26 @@ class TelegramUser(AbstractUser):
         if commit:
             self.save()
 
+    @property
+    def language_code(self):
+        if self.telegram_language_code in map(lambda x: x[0], settings.LANGUAGES):
+            return self.telegram_language_code
+        return settings.LANGUAGE_CODE
+
 
 class TeleDeepLink(models.Model):
     title = models.CharField(max_length=64, default='', blank=True)
     price = models.FloatField(null=True, blank=True)
     link = models.CharField(max_length=64, validators=[validators.RegexValidator(
         '^[a-zA-Z0-9_-]+$',
-        'Телеграм принимает только буквы, цифры и знаки - _ ',
+        _('Telegram is only accepted letters, numbers and signs - _'),
     )])
     users = models.ManyToManyField(settings.AUTH_USER_MODEL)
 
 
 class ActionLog(models.Model):
     """
-    Лог активностей пользователей
+    User actions logs
     """
 
     dttm = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -174,38 +183,70 @@ class BotMenuElem(models.Model):
 
     command = models.CharField(
         max_length=32, unique=True, null=True, blank=True,
-        help_text='Команда бота, по которой можно вызвать этот блок меню'
+        help_text=_('Bot command that can call this menu block')
     )
 
-    empty_block = models.BooleanField(default=False,
-                                      help_text='если забыли и нет события ловяшего коллбек, то это покажет')
+    empty_block = models.BooleanField(
+        default=False,
+        help_text=_('This block will be shown if there is no catching callback')
+    )
     is_visable = models.BooleanField(
         default=True,
-        help_text='Отображать ли этот блок меню пользователям (можно скрыть и не удалять для удобства)'
+        help_text=_('Whether to display this menu block to users (can be hidden and not deleted for convenience)')
     )
 
     callbacks_db = models.TextField(
         null=True, blank=True,
-        help_text='список регулярных выражений (пока только явный список) для коллбеков, которые вызывают это блок меню'
+        help_text=_('List of regular expressions (so far only an explicit list) for callbacks that call this menu block')
     )
 
     forward_message_id = models.IntegerField(null=True, blank=True)
     forward_chat_id = models.IntegerField(null=True, blank=True)
 
     message_format = models.CharField(max_length=2, choices=MESSAGE_FORMAT.MESSAGE_FORMATS, default=MESSAGE_FORMAT.TEXT)
-    message = models.TextField(help_text='Текстовое сообщение')
-    buttons_db = models.TextField(help_text='InlineKeyboardMarkup список кнопок, ({"text": , "url" or "callback_data"})', null=True, blank=True)
-    media = models.FileField(help_text='Файл приложение к сообщению', null=True, blank=True)
+    message = models.TextField(help_text=_('Text message'))
+    buttons_db = models.TextField(
+        null=True, blank=True,
+        help_text=_('InlineKeyboardMarkup buttons list, ({"text": , "url" or "callback_data"})')
+    )
+    media = models.FileField(help_text=_('File attachment to the message'), null=True, blank=True)
     telegram_file_code = models.CharField(
         max_length=512, null=True, blank=True,
-        help_text='Код файла в телеграмме (удалить при замене файла)'
+        help_text=_('File code in telegram (must be deleted when replacing file)')
     )
 
     def __str__(self):
         return f"BME ({self.id}) - { self.command or self.message[:32]}"
 
-    # def save(self, *args, **kwargs):
-    #     bot = telegram.Bot(TELEGRAM_TOKEN)
+    def save(self, *args, **kwargs):
+        # bot = telegram.Bot(TELEGRAM_TOKEN)
+        
+        super(BotMenuElem, self).save(*args, **kwargs)
+
+        # check and create new models for translation
+        if settings.USE_I18N and len(settings.LANGUAGES):
+            language_codes = set(map(lambda x: x[0], settings.LANGUAGES))
+            if settings.LANGUAGE_CODE in language_codes:
+                language_codes.remove(settings.LANGUAGE_CODE)
+
+            get_existed_language_codes = lambda text: set(BotMenuElemAttrText.objects.filter(
+                language_code__in=language_codes,
+                bot_menu_elem_id=self.id,
+                default_text=text,
+            ).values_list('language_code', flat=True))
+
+            BotMenuElemAttrText.objects.bulk_create([
+                BotMenuElemAttrText(language_code=language_code, default_text=self.message, bot_menu_elem_id=self.id)
+                for language_code in language_codes - get_existed_language_codes(self.message)
+            ])
+
+            for row_elem in self.buttons:
+                for elem in row_elem:
+                    if text := elem.get('text'):
+                        BotMenuElemAttrText.objects.bulk_create([
+                            BotMenuElemAttrText(language_code=language_code, default_text=text, bot_menu_elem_id=self.id)
+                            for language_code in language_codes - get_existed_language_codes(text)
+                        ])
 
     @property
     def buttons(self):
@@ -220,6 +261,56 @@ class BotMenuElem(models.Model):
             self._callbacks = json.loads(self.callbacks_db)
 
         return self._callbacks
+
+    def get_message(self, language='en'):
+        get_translate_model = None
+        if language != settings.LANGUAGE_CODE:
+            get_translate_model = BotMenuElemAttrText.objects.filter(
+                language_code=language,
+                bot_menu_elem_id=self.id,
+                default_text=self.message,
+                translated_text__isnull=False,
+            ).first()
+        text = get_translate_model.translated_text if get_translate_model else self.message
+        return text
+
+    def get_buttons(self, language='en'):
+        # todo: rewrite with 1 request to db (default_text__in=...)
+
+        get_translate_model = lambda text: BotMenuElemAttrText.objects.filter(
+            language_code=language,
+            bot_menu_elem_id=self.id,
+            default_text=text,
+            translated_text__isnull=False,
+        ).first()
+
+        need_translation = language != settings.LANGUAGE_CODE
+        buttons = []
+
+        for row_elem in self.buttons:
+            row_buttons = []
+            for elem in row_elem:
+                if elem.get('text') and need_translation and (translate_model := get_translate_model(elem['text'])):
+                    elem['text'] = translate_model.translated_text
+                row_buttons.append(InlineKeyboardButton(**elem))
+
+            buttons.append(row_buttons)
+        return buttons
+
+
+class BotMenuElemAttrText(models.Model):
+    class Meta:
+        unique_together = [['bot_menu_elem', 'language_code', 'default_text']]
+        index_together = [['bot_menu_elem', 'language_code', 'default_text']]
+
+    dttm_added = models.DateTimeField(default=timezone.now)
+    bot_menu_elem = models.ForeignKey(BotMenuElem, null=False, on_delete=models.CASCADE)
+
+    language_code = models.CharField(max_length=2)
+    default_text = models.TextField(
+        help_text=_('The text which should be translate')
+    )
+    translated_text = models.TextField(null=True, help_text=_('Default_text Translation'))
 
 
 class Trigger(AbstractActiveModel):
@@ -236,11 +327,15 @@ class Trigger(AbstractActiveModel):
     }
     ''')
 
-    min_duration = models.DurationField(help_text='минимальный период, в который может быть 1 уведомление '
-                                                  'для пользователя данного типа')
-    priority = models.IntegerField(default=1, help_text='чем больше тем в первую очередь будут выполняться')
+    min_duration = models.DurationField(
+        help_text=_('the minimum period in which there can be 1 notification for a user of this type')
+    )
+    priority = models.IntegerField(default=1, help_text=_('the more topics will be executed first'))
 
-    botmenuelem = models.ForeignKey(BotMenuElem, on_delete=models.PROTECT, help_text='какое сообщение по тригеру показываем')
+    botmenuelem = models.ForeignKey(
+        BotMenuElem, on_delete=models.PROTECT,
+        help_text=_('which trigger message to show')
+    )
 
     @property
     def condition(self):

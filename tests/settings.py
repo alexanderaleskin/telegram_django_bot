@@ -1,5 +1,7 @@
 import os
 import sys
+from django.utils.translation import gettext_lazy as _
+
 
 DIRNAME = os.path.dirname(__file__)
 
@@ -48,9 +50,22 @@ TEMPLATES = [
 ]
 
 LANGUAGE_CODE = 'ru-RU'
+USE_I18N = True
 
 TELEGRAM_TOKEN = '604076170:AAEOy1JQCZ0n-d3LT7DJGjbMaHCla0N4Vag'
 TELEGRAM_ROOT_UTRLCONF = 'tests.myapp.utrls'
 
 ROOT_URLCONF = 'tests.urls'
+
+LOCALE_PATHS = [
+    os.path.join(DIRNAME, 'locale')
+]
+
+LANGUAGES = [
+    ('en', _('English')),
+    # ('de', _('German')),
+    ('ru', _('Russian'))
+]
+
+
 

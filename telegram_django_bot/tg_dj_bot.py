@@ -1,16 +1,28 @@
 import time
 import sys
-import telegram
 from telegram import (
-    InlineKeyboardMarkup as inlinemark,
-    InlineKeyboardButton as inlinebutt
+    Update,
+    InputMediaPhoto,
+    InputMediaVideo,
+    InputMediaAudio,
+    InputMediaAnimation,
+    InputMediaDocument,
+    Message,
+    error,
 )
-from .models import BotMenuElem, MESSAGE_FORMAT
-from .utils import add_log_action
+from .models import BotMenuElem, BotMenuElemAttrText, MESSAGE_FORMAT
+from .utils import add_log_action, ERROR_MESSAGE
+from django.conf import settings  # LANGUAGES, USE_I18N
 import copy
+from django.utils import translation
+from .telegram_lib_redefinition import (
+    InlineKeyboardMarkupDJ,
+    BotDJ,
+    # TelegramDjangoObject2Json,
+)
 
 
-class TG_DJ_Bot(telegram.Bot):
+class TG_DJ_Bot(BotDJ):
     """
     no_error_send
     bot_menu_elem
@@ -18,7 +30,7 @@ class TG_DJ_Bot(telegram.Bot):
 
     def edit_or_send(bot, update, mess, buttons=None, only_send=False, decorate_buttons=True, timeout=None):
         if decorate_buttons and buttons:
-            marked_buttons = inlinemark(buttons)
+            marked_buttons = InlineKeyboardMarkupDJ(buttons)
         else:
             marked_buttons = buttons
 
@@ -71,33 +83,45 @@ class TG_DJ_Bot(telegram.Bot):
         if menu_elem is None:
             menu_elem = BotMenuElem.objects.filter(empty_block=True, is_visable=True).first()
 
-        buttons = []
-        for row_elem in menu_elem.buttons:
-            buttons.append([inlinebutt(**elem) for elem in row_elem])
-
-        extra_kwargs = {}
-        if len(buttons):
-            extra_kwargs['reply_markup'] = inlinemark(buttons)
-
         media_files_list = None
-        if menu_elem.message_format != MESSAGE_FORMAT.TEXT:
-            media_file = menu_elem.telegram_file_code or open(menu_elem.media.path, 'rb')
-            # if menu_elem.message_format == MESSAGE_FORMAT.PHOTO:
-            #     media_file = telegram.InputMediaPhoto(media_file)
-            # elif menu_elem.message_format == MESSAGE_FORMAT.VIDEO:
-            #     media_file = telegram.InputMediaVideo(media_file)
-            # elif menu_elem.message_format == MESSAGE_FORMAT.AUDIO:
-            #     media_file = telegram.InputMediaAudio(media_file)
-            # elif menu_elem.message_format == MESSAGE_FORMAT.GIF:
-            #     media_file = telegram.InputMediaAnimation(media_file)
-            # else:  # menu_elem.message_format == MESSAGE_FORMAT.DOCUMENT:
-            #     media_file = telegram.InputMediaDocument(media_file)
+        extra_kwargs = {}
 
-            media_files_list = [media_file]
+        if menu_elem is None:
+            if settings.USE_I18N:
+                translation.activate(user.language_code)
+
+            message_format = MESSAGE_FORMAT.TEXT
+            mess = ERROR_MESSAGE
+        else:
+            language_code = settings.LANGUAGE_CODE
+            if settings.USE_I18N and user.language_code != settings.LANGUAGE_CODE:
+                language_code = user.language_code
+
+            message_format = menu_elem.message_format
+            mess = menu_elem.get_message(language_code)
+            buttons = menu_elem.get_buttons(language_code)
+
+            if len(buttons):
+                extra_kwargs['reply_markup'] = InlineKeyboardMarkupDJ(buttons)
+
+            if menu_elem.message_format != MESSAGE_FORMAT.TEXT:
+                media_file = menu_elem.telegram_file_code or open(menu_elem.media.path, 'rb')
+                # if menu_elem.message_format == MESSAGE_FORMAT.PHOTO:
+                #     media_file = telegram.InputMediaPhoto(media_file)
+                # elif menu_elem.message_format == MESSAGE_FORMAT.VIDEO:
+                #     media_file = telegram.InputMediaVideo(media_file)
+                # elif menu_elem.message_format == MESSAGE_FORMAT.AUDIO:
+                #     media_file = telegram.InputMediaAudio(media_file)
+                # elif menu_elem.message_format == MESSAGE_FORMAT.GIF:
+                #     media_file = telegram.InputMediaAnimation(media_file)
+                # else:  # menu_elem.message_format == MESSAGE_FORMAT.DOCUMENT:
+                #     media_file = telegram.InputMediaDocument(media_file)
+
+                media_files_list = [media_file]
 
         response, media_codes = bot.send_format_message(
-            menu_elem.message_format,
-            menu_elem.message,
+            message_format,
+            mess,
             media_files_list,
             update,
             user.id,
@@ -112,11 +136,11 @@ class TG_DJ_Bot(telegram.Bot):
 
     def send_format_message(
             bot,
-            message_format:str=MESSAGE_FORMAT.TEXT,
-            text:str=None,
-            media_files_list:list=None,
-            update:telegram.Update=None,
-            chat_id:int=None,
+            message_format: str = MESSAGE_FORMAT.TEXT,
+            text: str = None,
+            media_files_list: list = None,
+            update: Update = None,
+            chat_id: int = None,
             only_send=False,
 
             **telegram_message_kwargs
@@ -136,11 +160,11 @@ class TG_DJ_Bot(telegram.Bot):
         """
 
         input_media_dict = {
-            MESSAGE_FORMAT.PHOTO: telegram.InputMediaPhoto,
-            MESSAGE_FORMAT.VIDEO: telegram.InputMediaVideo,
-            MESSAGE_FORMAT.AUDIO: telegram.InputMediaAudio,
-            MESSAGE_FORMAT.GIF: telegram.InputMediaAnimation,
-            MESSAGE_FORMAT.DOCUMENT: telegram.InputMediaDocument,
+            MESSAGE_FORMAT.PHOTO: InputMediaPhoto,
+            MESSAGE_FORMAT.VIDEO: InputMediaVideo,
+            MESSAGE_FORMAT.AUDIO: InputMediaAudio,
+            MESSAGE_FORMAT.GIF: InputMediaAnimation,
+            MESSAGE_FORMAT.DOCUMENT: InputMediaDocument,
         }
 
         # checks data
@@ -256,7 +280,7 @@ class TG_DJ_Bot(telegram.Bot):
                     )
 
         media_files_codes = []
-        if type(response) == telegram.Message:
+        if type(response) == Message:
             media_file = response.document or response.audio or response.video or response.animation
             if media_file is None and response.photo:
                 media_file = response.photo[-1] # last -- biggest
@@ -277,13 +301,13 @@ class TG_DJ_Bot(telegram.Bot):
             is_sent = True
             time.sleep(0.035)
 
-        except telegram.error.Unauthorized as e:
+        except error.Unauthorized as e:
             print('blocked \n\n', e, user.id)
             user.is_active = False
             user.save()
             add_log_action(user.id, 'TYPE_BLOCKED')
 
-        except telegram.error.BadRequest as e:
+        except error.BadRequest as e:
             if e.message == 'Chat not found':
                 user.is_active = False
                 user.save()
