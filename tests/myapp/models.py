@@ -53,6 +53,7 @@ class Order(models.Model):
     info = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=32, choices=STATUSES)
 
+    entities = models.ManyToManyField(Entity, blank=True)
 
 class BoughtItem(models.Model):
     entity_size = models.ForeignKey(EntitySizeAmount, on_delete=models.PROTECT)

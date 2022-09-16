@@ -5,15 +5,18 @@ import telegram
 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from .models import ActionLog, TeleDeepLink, BotMenuElem
-from telegram import (
-    InlineKeyboardButton as inlinebutt
+from .models import ActionLog, TeleDeepLink
+from .telegram_lib_redefinition import (
+    InlineKeyboardButtonDJ as inlinebutt
 )
+from django.conf import settings  # LANGUAGES, USE_I18N
 from calendar import monthcalendar
 from dateutil.relativedelta import relativedelta
+from django.utils import translation
+from django.utils.translation import gettext_lazy as _
 
 
-ERROR_MESSAGE = f'Упс! Кажется, произошла ошибка, обратитесь в поддержку (контакт в описании)!'
+ERROR_MESSAGE = _('Oops! It seems that an error has occurred, please write to support (contact in bio)!')
 
 
 def add_log_action(user_id, action):
@@ -54,6 +57,7 @@ def handler_decor(log_type='F'):
                     'telegram_username':  user_details.username[:64] if user_details.username else '',
                     'first_name': user_details.first_name[:30] if user_details.first_name else '',
                     'last_name': user_details.last_name[:60] if user_details.last_name else '',
+                    'telegram_language_code': user_details.language_code or 'en',
                 }
             )
 
@@ -66,6 +70,8 @@ def handler_decor(log_type='F'):
                 user.is_active = True
                 user.save()
 
+            if settings.USE_I18N:
+                translation.activate(user.language_code)
 
             try:
                 res = func(bot, update, user)
@@ -78,7 +84,7 @@ def handler_decor(log_type='F'):
                     raise error.with_traceback(tb)
             except Exception as e:
 
-                res = [bot.send_message(user.id, ERROR_MESSAGE)]
+                res = [bot.send_message(user.id, str(ERROR_MESSAGE))]
                 tb = sys.exc_info()[2]
                 raise e.with_traceback(tb)
 
@@ -105,6 +111,8 @@ def handler_decor(log_type='F'):
     return decor
 
 
+
+# todo: rewrite code
 class ButtonPagination:
     """
     buttons -- массив кнопок с значением, которые отображать, формат кнопок:
@@ -275,7 +283,7 @@ class ButtonPagination:
 
         return telega_buttons
 
-
+# todo: rewrite code
 class CalendarPagination:
     def __init__(
             self,

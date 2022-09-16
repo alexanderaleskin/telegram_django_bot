@@ -88,7 +88,7 @@ class RouterCallbackMessageCommandHandler(Handler):
         # check if utrls
         if update.callback_query:
             callback_func = telega_resolve(update.callback_query.data)
-        elif update.message and update.message.text[0] == '/':
+        elif update.message and update.message.text[0] == '/':  # is it ok? seems message couldnt be an url
             callback_func = telega_resolve(update.message.text)
 
         if callback_func is None:

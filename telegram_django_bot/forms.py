@@ -1,6 +1,7 @@
 from django.forms.forms import BaseForm, DeclarativeFieldsMetaclass, ErrorList, ErrorDict
-from django.forms.models import BaseModelForm, ModelFormMetaclass
+from django.forms.models import BaseModelForm, ModelFormMetaclass, ModelMultipleChoiceField
 from django.forms import HiddenInput
+from django.db import models
 
 # todo: PreChoise logic to fields
 # todo: support media
@@ -19,6 +20,19 @@ class BaseTelegaForm(BaseForm):
     # field_order = None
     form_name = ''
 
+    def _multichoice_intersection(self, set_from_user, set_from_db):
+        # todo: in another place should be check with check from field type
+
+        if len(set_from_db):
+            db_values_type = type(next(iter(set_from_db)))  # int (if standart pk)
+            set_from_user = set([db_values_type(elem) for elem in set_from_user])
+
+        if set_from_db.intersection(set_from_user):
+            new_pks = set_from_db - set_from_user
+        else:
+            new_pks = set_from_db.union(set_from_user)
+        return list(new_pks)
+
     def _init_helper_get_data(self, user, data):
         # import pdb;pdb.set_trace()
 
@@ -27,6 +41,12 @@ class BaseTelegaForm(BaseForm):
             curr_data = user.current_utrl_form.get('form_data')
         else:
             user.clear_status()
+
+        for model_field in self.base_fields:
+            if self.base_fields[model_field].__class__ == ModelMultipleChoiceField and model_field in data:
+                models_from_user = set(data.pop(model_field, []) or [])
+                models_from_db = set(curr_data.pop(model_field, []))
+                curr_data[model_field] = self._multichoice_intersection(models_from_user, models_from_db)
 
         if type(data) is dict:
             curr_data.update(data)
@@ -96,20 +116,40 @@ class BaseTelegaModelForm(BaseTelegaForm, BaseModelForm):
         self.user = user
         if instance is None:
             data = self._init_helper_get_data(user, data)
+        else:
+            for model_field in self.base_fields:
+                if hasattr(instance, model_field):
+                    if self.base_fields[model_field].__class__ == ModelMultipleChoiceField:
+                        get_from_user_pks = set(data.get(model_field, []) or [])
+                        get_from_db = getattr(instance, model_field).all()
+                        get_from_db_pks = set(el.pk for el in get_from_db)
+
+                        data[model_field] = self._multichoice_intersection(get_from_user_pks, get_from_db_pks)
+                    elif not model_field in data:
+                        data[model_field] = getattr(instance, model_field)
+                        if issubclass(type(data[model_field]), models.Manager):
+                            data[model_field] = data[model_field].all()
+                else:
+                    raise ValueError(
+                        f'fields in Telegamodelform should have same name: {model_field}, {instance.__dict__.keys()}')
 
         BaseModelForm.__init__(self, data, files, initial=initial, instance=instance)
         # self.error_class = TelegaErrorList
 
         self.next_field = None
-        if instance is None:
-            self.fields, self.next_field = self._init_helper_fields_detection(data)
+        self.fields, self.next_field = self._init_helper_fields_detection(data)
 
-    def save(self, commit=True):
-        # import pdb; pdb.set_trace()
+    def save(self, commit=True, is_completed=True):
+        """
+
+        :param commit: save to db (in user on in model)
+        :param is_completed: special signal -- if not yet completed and no instance, then save only to user
+        :return:
+        """
 
         # there was add condition " len(set(self.base_fields.keys()) - set(self.fields.keys())) == 0: " --
         # but with hidden unnecessary field could be len(set(self.base_fields.keys()) - set(self.fields.keys())) > 0
-        if self.is_valid() and self.next_field is None:
+        if self.is_valid() and self.next_field is None and (is_completed or self.instance.pk):
             # full valid form
             BaseModelForm.save(self, commit=commit)
             self.user.clear_status()
