@@ -88,4 +88,11 @@ class Migration(migrations.Migration):
                 'index_together': {('bot_menu_elem', 'language_code', 'default_text')},
             },
         ),
+        migrations.AlterField(
+            model_name='botmenuelem',
+            name='message_format',
+            field=models.CharField(
+                choices=[('T', 'Text'), ('P', 'Image'), ('D', 'Document'), ('A', 'Audio'), ('V', 'Video'),
+                         ('G', 'GIF/animation'), ('GM', 'Media Group')], default='T', max_length=2),
+        ),
     ]

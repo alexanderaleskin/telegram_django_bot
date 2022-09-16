@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-09-15 17:50+0300\n"
+"POT-Creation-Date: 2022-09-16 19:50+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -96,15 +96,15 @@ msgstr "Медиа файл сообщения"
 msgid "File code in telegram (must be deleted when replacing file)"
 msgstr "Файл приложение к сообщению"
 
-#: models.py:313
+#: models.py:311
 msgid "The text which should be translate"
 msgstr "Код файла в телеграмме (удалить при замене файла)"
 
-#: models.py:315
+#: models.py:313
 msgid "Default_text Translation"
 msgstr "Перевод Default_text"
 
-#: models.py:333
+#: models.py:331
 msgid ""
 "the minimum period in which there can be 1 notification for a user of this "
 "type"
@@ -112,15 +112,15 @@ msgstr ""
 "минимальный период, в который может быть 1 уведомление для пользователя "
 "данного типа"
 
-#: models.py:335
+#: models.py:333
 msgid "the more topics will be executed first"
 msgstr "чем больше тем в первую очередь будут выполняться"
 
-#: models.py:339
+#: models.py:337
 msgid "which trigger message to show"
 msgstr "какое сообщение по тригеру показывать"
 
-#: td_viewset.py:194
+#: td_viewset.py:207
 msgid ""
 "The field has been updated!\n"
 "\n"
@@ -128,25 +128,25 @@ msgstr ""
 "Поле успешно обновлено!\n"
 "\n"
 
-#: td_viewset.py:234
+#: td_viewset.py:251
 #, python-format
 msgid "The %(viewset_name)s  #%(model_id)s is successfully deleted."
 msgstr "%(viewset_name)s  #%(model_id)s успешно удален(а)."
 
-#: td_viewset.py:243 td_viewset.py:326
+#: td_viewset.py:260 td_viewset.py:343
 msgid "🔙 Return to list"
 msgstr "🔙 Назад к списку"
 
-#: td_viewset.py:315
+#: td_viewset.py:332
 #, python-format
 msgid "❌ Delete #%(model_id)s"
 msgstr "❌ Удалить #%(model_id)s"
 
-#: td_viewset.py:399
+#: td_viewset.py:425
 msgid "There is nothing to show."
 msgstr "Пока тут пусто."
 
-#: td_viewset.py:416
+#: td_viewset.py:454
 #, python-format
 msgid ""
 "Please, fill the field %(label)s\n"
@@ -155,15 +155,19 @@ msgstr ""
 "Укажите значение для поля %(label)s\n"
 "\n"
 
-#: td_viewset.py:442
+#: td_viewset.py:497
 msgid "Write the value"
 msgstr "Указать значение"
 
-#: td_viewset.py:449 td_viewset.py:503
+#: td_viewset.py:501
+msgid "Next"
+msgstr "Далее"
+
+#: td_viewset.py:508 td_viewset.py:558
 msgid "⬅️ Go back"
 msgstr "⬅️ Назад"
 
-#: td_viewset.py:461
+#: td_viewset.py:520
 #, python-format
 msgid ""
 "The %(viewset_name)s is created! \n"
@@ -172,7 +176,7 @@ msgstr ""
 "%(viewset_name)s успешно создан(а)! \n"
 "\n"
 
-#: td_viewset.py:471
+#: td_viewset.py:528
 #, python-format
 msgid ""
 "While adding %(label)s the next errors were occurred: %(errors)s\n"
@@ -181,7 +185,7 @@ msgstr ""
 "При добавлении поля %(label)s возникли ошибки: %(errors)s\n"
 "\n"
 
-#: td_viewset.py:478
+#: td_viewset.py:533
 #, python-format
 msgid ""
 "Please, write the value for field %(label)s \n"
@@ -190,7 +194,7 @@ msgstr ""
 "Напишите значение для поля %(label)s \n"
 "\n"
 
-#: td_viewset.py:512
+#: td_viewset.py:567
 #, python-format
 msgid ""
 "The %(viewset_name)s %(model_id)s has not been found 😱 \n"
