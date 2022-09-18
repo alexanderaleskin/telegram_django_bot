@@ -22,14 +22,13 @@ class ActionLogAdmin(admin.ModelAdmin):
 
 @admin.register(TeleDeepLink)
 class TeleDeepLinkAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'price', 'link', 'count_users', 'count_activated',)
+    list_display = ('id', 'title', 'price', 'link', 'count_users')
     search_fields = ('title',)
 
     def get_queryset(self, request):
         qs = super(TeleDeepLinkAdmin, self).get_queryset(request)
         return qs.annotate(
-            c_users=Count('users'),
-            ca_users=Count('users', filter=Q(users__activated=True))
+            c_users=Count('users')
         )
 
     def count_users(self, inst):

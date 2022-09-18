@@ -60,10 +60,11 @@ def all_callback_bme_handler(bot, update, user):
 
 
 class RouterCallbackMessageCommandHandler(Handler):
-    def __init__(self, **kwargs):
+    def __init__(self, utrl_conf=None, **kwargs):
         kwargs['callback'] = lambda x: 'for base class'
         super().__init__(**kwargs)
         self.callback = None
+        self.utrl_conf = utrl_conf
 
     def check_update(self, update: object):
         """
@@ -107,7 +108,7 @@ class RouterCallbackMessageCommandHandler(Handler):
                 if user:
                     print('user.current_utrl', user.current_utrl)
                     if user.current_utrl:
-                        callback_func = telega_resolve(user.current_utrl)
+                        callback_func = telega_resolve(user.current_utrl, self.utrl_conf)
 
         if not callback_func is None:
             if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegaViewSet):
