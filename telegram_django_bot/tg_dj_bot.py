@@ -91,7 +91,7 @@ class TG_DJ_Bot(BotDJ):
                 translation.activate(user.language_code)
 
             message_format = MESSAGE_FORMAT.TEXT
-            mess = ERROR_MESSAGE
+            mess = str(ERROR_MESSAGE)
         else:
             language_code = settings.LANGUAGE_CODE
             if settings.USE_I18N and user.language_code != settings.LANGUAGE_CODE:
@@ -186,6 +186,7 @@ class TG_DJ_Bot(BotDJ):
             raise ValueError(f'update and chat_id could be together None -- to which chat send message then?')
 
         chat_id = chat_id or update.effective_user.id
+        text = str(text)  # for internalization (django __proxy__ error)
 
         telegram_message_kwargs = copy.deepcopy(telegram_message_kwargs)
         if not 'parse_mode' in telegram_message_kwargs:
