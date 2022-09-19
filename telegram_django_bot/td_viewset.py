@@ -242,15 +242,21 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         else:
             return self.generate_message_no_elem(model_or_pk)
 
-    def delete(self, model_id):
+    def delete(self, model_or_pk):
         """delete item"""
 
         # import pdb;pdb.set_trace()
-        deleted = self.get_queryset().filter(id=model_id).delete()
-        if deleted[0]:
+        if issubclass(type(model_or_pk), models.Model):
+            model = model_or_pk
+        else:
+            model = self.get_queryset().filter(pk=model_or_pk).first()
+
+        if model:
+            model.delete()
+
             mess = _('The %(viewset_name)s  #%(model_id)s is successfully deleted.') % {
                 'viewset_name': self.viewset_name,
-                'model_id': model_id,
+                'model_id': model_or_pk,
             }
 
             buttons = None
@@ -265,7 +271,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
                 ]
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
-            return self.generate_message_no_elem(model_id)
+            return self.generate_message_no_elem(model_or_pk)
 
     def generate_value_str(self, model, field, field_name, try_field='name'):
         value = getattr(model, field_name, "")
