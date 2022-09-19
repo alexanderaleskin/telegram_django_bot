@@ -129,7 +129,7 @@ class TG_DJ_Bot(BotDJ):
             **extra_kwargs,
         )
 
-        if menu_elem.telegram_file_code is None and menu_elem.media and len(media_codes) > 0:
+        if menu_elem and menu_elem.telegram_file_code is None and menu_elem.media and len(media_codes) > 0:
             menu_elem.telegram_file_code = media_codes[0]
             menu_elem.save()
         return [response]

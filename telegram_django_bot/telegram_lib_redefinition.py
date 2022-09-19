@@ -17,6 +17,8 @@ class TelegramDjangoEncoder(json.JSONEncoder):
 
 
 class TelegramDjangoObject2Json:
+    __slots__ = ()
+
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), cls=TelegramDjangoEncoder)
 
