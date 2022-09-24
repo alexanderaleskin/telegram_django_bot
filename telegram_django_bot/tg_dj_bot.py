@@ -28,7 +28,7 @@ class TG_DJ_Bot(BotDJ):
     bot_menu_elem
     """
 
-    def edit_or_send(bot, update, mess, buttons=None, only_send=False, decorate_buttons=True, timeout=None):
+    def edit_or_send(bot, update, mess, buttons=None, only_send=False, decorate_buttons=True, **kwargs):
         if decorate_buttons and buttons:
             marked_buttons = InlineKeyboardMarkupDJ(buttons)
         else:
@@ -66,16 +66,14 @@ class TG_DJ_Bot(BotDJ):
         #
         #             **telegram_message_kwargs
 
+        kwargs['reply_markup'] = marked_buttons
+
         res_mess, _ = bot.send_format_message(
             MESSAGE_FORMAT.TEXT,
             mess,
             update=update,
             only_send=only_send,
-
-            **{
-                'reply_markup': marked_buttons,
-                'timeout': timeout,
-            }
+            **kwargs,
         )
         return res_mess
 
