@@ -1,15 +1,15 @@
 # from bot_conf.celery import app
-from django.settings import TELEGRAM_TOKEN
-
-from .models import User, Trigger, UserTrigger, ActionLog
-from .utils import send_botmenuelem, task_send_message_handler
+from django.conf import settings
 
 from django.utils import timezone
 from django.db.models import Count
 from django.db.models.functions import Coalesce
 from django.db.models import OuterRef, Exists
 
-import telegram
+from django.contrib.auth import get_user_model
+from .models import Trigger, UserTrigger, ActionLog
+from .tg_dj_bot import TG_DJ_Bot
+# from .utils import send_botmenuelem, task_send_message_handler
 
 
 # @app.task
@@ -23,6 +23,7 @@ def create_triggers():
         }
 
     dttm_now = timezone.now()
+    User = get_user_model()
 
     for trigger in Trigger.objects.bot_filter_active().order_by('-priority').select_related('botmenuelem'):
         users = User.objects.filter(is_active=True)
@@ -102,7 +103,7 @@ def create_triggers():
 
 
 # @app.task
-def send_triggers(user_ids: [User]):
+def send_triggers(user_ids):
     dttm_now = timezone.now()
     UserTrigger.objects.filter(
         is_sent=False,
@@ -116,12 +117,15 @@ def send_triggers(user_ids: [User]):
         user_id__in=user_ids,
     ).select_related('trigger', 'trigger__botmenuelem', 'user')
 
-    bot = telegram.Bot(TELEGRAM_TOKEN)
+    bot = TG_DJ_Bot(settings.TELEGRAM_TOKEN)
+
+    def _send_wrapper(self, *args, **kwargs):
+        return bot.send_botmenuelem(*args, **kwargs)
 
     sent_user_triggers = []
     for user_trigger in user_triggers:
-        is_sent, res_mess = task_send_message_handler(
-            send_botmenuelem,
+        is_sent, res_mess = bot.task_send_message_handler(
+            _send_wrapper,
             user_trigger.user,
             bot,
             None,
