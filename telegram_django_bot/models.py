@@ -89,7 +89,7 @@ class TelegramUser(AbstractUser):
 
     timezone = models.DurationField(default=timezone.timedelta(hours=3))
 
-    current_utrl = models.CharField(max_length=32, default='', blank=True) # todo: add verify comparisson current_utrl and current_utrl_context_db/current_utrl_form_db
+    current_utrl = models.CharField(max_length=64, default='', blank=True) # todo: add verify comparisson current_utrl and current_utrl_context_db/current_utrl_form_db
     current_utrl_code_dttm = models.DateTimeField(null=True, blank=True)
     current_utrl_context_db = models.CharField(max_length=4096, default='{}', blank=True)
     # form structure {'form_name': '', 'form_data': {}}

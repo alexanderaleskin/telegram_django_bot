@@ -30,7 +30,10 @@ class BaseTelegaForm(BaseForm):
         if set_from_db.intersection(set_from_user):
             new_pks = set_from_db - set_from_user
         else:
-            new_pks = set_from_db.union(set_from_user)
+            if len(set_from_user):
+                new_pks = set_from_db.union(set_from_user)
+            else:
+                new_pks = []
         return list(new_pks)
 
     def _init_helper_get_data(self, user, data):

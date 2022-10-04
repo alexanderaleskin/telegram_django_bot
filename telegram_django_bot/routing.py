@@ -60,11 +60,32 @@ def all_callback_bme_handler(bot, update, user):
 
 
 class RouterCallbackMessageCommandHandler(Handler):
-    def __init__(self, utrl_conf=None, **kwargs):
+    def __init__(self, utrl_conf=None, only_utrl=False, **kwargs):
         kwargs['callback'] = lambda x: 'for base class'
         super().__init__(**kwargs)
         self.callback = None
         self.utrl_conf = utrl_conf
+        self.only_utrl = only_utrl # without BME elems
+
+    def get_callback_utrl(self, update):
+        callback_func = None
+        # check if utrls
+        if update.callback_query:
+            callback_func = telega_resolve(update.callback_query.data, self.utrl_conf)
+        elif update.message and update.message.text[0] == '/':  # is it ok? seems message couldnt be an url
+            callback_func = telega_resolve(update.message.text, self.utrl_conf)
+
+        if callback_func is None:
+            # update.message -- could be data or info for managing, command could not be a data, it is managing info
+            if update.message and update.message.text[0] != '/':
+                user_details = update.message.from_user
+
+                user = get_user_model().objects.filter(id=user_details.id).first()
+                if user:
+                    print('user.current_utrl', user.current_utrl)
+                    if user.current_utrl:
+                        callback_func = telega_resolve(user.current_utrl, self.utrl_conf)
+        return callback_func
 
     def check_update(self, update: object):
         """
@@ -73,7 +94,12 @@ class RouterCallbackMessageCommandHandler(Handler):
         :return:
         """
         if isinstance(update, telegram.Update) and (update.effective_message or update.callback_query):
-            return True
+            if not self.only_utrl:
+                return True
+            else:
+                callback = self.get_callback_utrl(update)
+                if callback:
+                    return True
         return None
 
     def handle_update(
@@ -85,30 +111,7 @@ class RouterCallbackMessageCommandHandler(Handler):
     ):
         # todo: add flush utrl and data if viewset utrl change or error
 
-        callback_func = None
-        # check if utrls
-        if update.callback_query:
-            callback_func = telega_resolve(update.callback_query.data, self.utrl_conf)
-        elif update.message and update.message.text[0] == '/':  # is it ok? seems message couldnt be an url
-            callback_func = telega_resolve(update.message.text, self.utrl_conf)
-
-        if callback_func is None:
-            # should callback_query resolved by update.callback_query.data (update.inline_query.from_user -- not supported yet)
-            # if update.callback_query:
-            #     user_details = update.callback_query.from_user
-            # elif update.inline_query:
-            #     user_details = update.inline_query.from_user
-            # else:
-
-            # update.message -- could be data or info for managing, command could not be a data, it is managing info
-            if update.message and update.message.text[0] != '/':
-                user_details = update.message.from_user
-
-                user = get_user_model().objects.filter(id=user_details.id).first()
-                if user:
-                    print('user.current_utrl', user.current_utrl)
-                    if user.current_utrl:
-                        callback_func = telega_resolve(user.current_utrl, self.utrl_conf)
+        callback_func = self.get_callback_utrl(update)
 
         if not callback_func is None:
             if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegaViewSet):
@@ -121,7 +124,7 @@ class RouterCallbackMessageCommandHandler(Handler):
             else:
                 callback_func = callback_func.func
 
-        # check if in BME
+        # check if in BME (we do not need check only_utrl here, as there was a check in self.check_update)
         if callback_func is None:
             if update.callback_query:
                 callback_func = all_callback_bme_handler
