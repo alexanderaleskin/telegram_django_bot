@@ -121,14 +121,23 @@ class BaseTelegaModelForm(BaseTelegaForm, BaseModelForm):
             data = self._init_helper_get_data(user, data)
         else:
             for model_field in self.base_fields:
+                use_from_db = False
                 if hasattr(instance, model_field):
                     if self.base_fields[model_field].__class__ == ModelMultipleChoiceField:
-                        get_from_user_pks = set(data.get(model_field, []) or [])
-                        get_from_db = getattr(instance, model_field).all()
-                        get_from_db_pks = set(el.pk for el in get_from_db)
+                        info_from_user = data.get(model_field)
+                        if not info_from_user is None:
+                            get_from_user_pks = set(info_from_user)
+                            get_from_db = getattr(instance, model_field).all()
+                            get_from_db_pks = set(el.pk for el in get_from_db)
 
-                        data[model_field] = self._multichoice_intersection(get_from_user_pks, get_from_db_pks)
+                            data[model_field] = self._multichoice_intersection(get_from_user_pks, get_from_db_pks)
+                        else:
+                            use_from_db = True
+
                     elif not model_field in data:
+                        use_from_db = True
+
+                    if use_from_db:
                         data[model_field] = getattr(instance, model_field)
                         if issubclass(type(data[model_field]), models.Manager):
                             data[model_field] = data[model_field].all()
