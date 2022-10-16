@@ -169,7 +169,7 @@ class ActionLog(models.Model):
     """
 
     dttm = models.DateTimeField(auto_now_add=True, db_index=True)
-    type = models.CharField(max_length=32)
+    type = models.CharField(max_length=64)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
