@@ -6,7 +6,7 @@ import copy
 from django.forms import HiddenInput
 from django.forms.models import ModelMultipleChoiceField
 from django.db import models
-from django.forms.fields import ChoiceField
+from django.forms.fields import ChoiceField, BooleanField
 from .utils import add_log_action
 from django.utils.translation import gettext as _
 
@@ -493,7 +493,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
                 next_field, func_response, choices, selected_variants, callback_path
             )
 
-            if not is_choice_field:
+            if not is_choice_field and not issubclass(type(self.telega_form.base_fields[next_field]), BooleanField):
                 buttons.append([
                     inlinebutt(text=_('Write the value'), callback_data=callback_path(self.WRITE_MESSAGE_VARIANT_SYMBOLS))
                 ])
