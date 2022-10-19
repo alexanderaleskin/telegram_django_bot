@@ -62,10 +62,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
     cancel_adding_button = None
     use_name_and_id_in_elem_showing = True
 
-    # on_created_success_action = None
-    # cancel_action = None
-    #
-    # return_button = None
+    generate_function_main_mess = {}
 
     def construct_utrl(self, *args):
         return '-'.join(map(lambda x: str(x), args))
@@ -454,7 +451,13 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         if is_choice_field or self.prechoice_fields_values.get(next_field):
             buttons = []
             field = self.telega_form.base_fields[next_field]
-            mess += _('Please, fill the field %(label)s\n\n') % {'label': field.label}
+
+            if 'generate_message_next_field' in self.generate_function_main_mess:
+                message = self.generate_function_main_mess['generate_message_next_field']
+            else:
+                message = _('Please, fill the field %(label)s\n\n')
+
+            mess += message % {'label': field.label}
             if field.help_text:
                 mess += f'{field.help_text}\n\n'
 
@@ -518,7 +521,12 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             return self.generate_message_self_variant(next_field, mess, func_response=func_response, instance_id=instance_id)
 
     def generate_message_success_created(self, model_or_pk=None, mess=''):
-        mess += _('The %(viewset_name)s is created! \n\n') % {'viewset_name': self.viewset_name}
+        if 'generate_message_success_created' in self.generate_function_main_mess:
+            message = self.generate_function_main_mess['generate_message_success_created']
+        else:
+            message = _('The %(viewset_name)s is created! \n\n')
+
+        mess += message % {'viewset_name': self.viewset_name}
 
         if model_or_pk:
             return self.show_elem(model_or_pk, mess)
@@ -526,12 +534,25 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
 
     def generate_message_value_error(self, field_name, errors, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
-        mess += _('While adding %(label)s the next errors were occurred: %(errors)s\n\n') % {'label': field.label, 'errors': errors}
+
+        if 'generate_message_value_error' in self.generate_function_main_mess:
+            message = self.generate_function_main_mess['generate_message_value_error']
+        else:
+            message = _('While adding %(label)s the next errors were occurred: %(errors)s\n\n')
+        mess += message % {'label': field.label, 'errors': errors}
+
         return self.generate_message_self_variant(field_name, mess, func_response=func_response, instance_id=instance_id)
 
     def generate_message_self_variant(self, field_name, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
-        mess += _('Please, write the value for field %(label)s \n\n') % {'label': field.label}
+
+        if 'generate_message_self_variant' in self.generate_function_main_mess:
+            message = self.generate_function_main_mess['generate_message_self_variant']
+        else:
+            message = _('Please, write the value for field %(label)s \n\n')
+
+        mess += message % {'label': field.label}
+
         if field.help_text:
             mess += f'{field.help_text}\n\n'
 
@@ -565,9 +586,11 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         return self.CHAT_ACTION_MESSAGE, (mess, buttons)
 
     def generate_message_no_elem(self, model_id):
-        mess = _('The %(viewset_name)s %(model_id)s has not been found 😱 \nPlease try again from the beginning.') % {
-            'viewset_name': self.viewset_name,
-            'model_id': model_id
-        }
+        if 'generate_message_no_elem' in self.generate_function_main_mess:
+            message = self.generate_function_main_mess['generate_message_no_elem']
+        else:
+            message = _('The %(viewset_name)s %(model_id)s has not been found 😱 \nPlease try again from the beginning.')
+        mess = message % {'viewset_name': self.viewset_name, 'model_id': model_id}
+
         return self.CHAT_ACTION_MESSAGE, (mess, None)
 
