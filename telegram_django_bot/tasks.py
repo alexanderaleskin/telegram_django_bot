@@ -128,7 +128,6 @@ def send_triggers(user_ids):
         is_sent, res_mess = bot.task_send_message_handler(
             _send_wrapper,
             user_trigger.user,
-            bot,
             None,
             user_trigger.user,  # для task_send_message_handler и для send_botmenuelem
             user_trigger.trigger.botmenuelem
@@ -140,7 +139,7 @@ def send_triggers(user_ids):
     ActionLog.objects.bulk_create([
         ActionLog(
             type=f'TRIGGER_SENT-{x.trigger_id}',
-            user=x.user_id
+            user_id=x.user_id
         ) for x in sent_user_triggers
     ])
 
