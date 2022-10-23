@@ -181,8 +181,8 @@ class BotMenuElem(models.Model):
     actually subscribe, not payment
     """
 
-    command = models.CharField(
-        max_length=32, unique=True, null=True, blank=True,
+    command = models.TextField(  # for multichoice start
+        unique=True, null=True, blank=True,
         help_text=_('Bot command that can call this menu block')
     )
 
@@ -216,7 +216,7 @@ class BotMenuElem(models.Model):
     )
 
     def __str__(self):
-        return f"BME ({self.id}) - { self.command or self.message[:32]}"
+        return f"BME ({self.id}) - { self.command[:32] or self.message[:32]}"
 
     def save(self, *args, **kwargs):
         # bot = telegram.Bot(TELEGRAM_TOKEN)

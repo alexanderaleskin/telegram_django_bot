@@ -42,10 +42,24 @@ def telega_reverse(viewname, utrl_conf=None, args=None, kwargs=None, current_app
 @handler_decor(log_type='C')
 def all_command_bme_handler(bot, update, user):
 
-    menu_elem = BotMenuElem.objects.filter(
-        command=update.message.text[1:],
-        is_visable=True,
-    ).first()
+    if len(update.message.text[1:]) and 'start' == update.message.text[1:].split()[0]:
+        menu_elem = None
+        if len(update.message.text[1:]) > 6:  # 'start ' + something
+            menu_elem = BotMenuElem.objects.filter(
+                command__contains=update.message.text[1:],
+                is_visable=True,
+            ).first()
+
+        if menu_elem is None:
+            menu_elem = BotMenuElem.objects.filter(
+                command='start',
+                is_visable=True,
+            ).first()
+    else:
+        menu_elem = BotMenuElem.objects.filter(
+            command=update.message.text[1:],
+            is_visable=True,
+        ).first()
     return bot.send_botmenuelem(update, user, menu_elem)
 
 
