@@ -23,7 +23,7 @@ class ActionLogAdmin(admin.ModelAdmin):
 @admin.register(TeleDeepLink)
 class TeleDeepLinkAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'price', 'link', 'count_users')
-    search_fields = ('title',)
+    search_fields = ('title', 'link')
 
     def get_queryset(self, request):
         qs = super(TeleDeepLinkAdmin, self).get_queryset(request)

@@ -9,10 +9,11 @@ from django.db.models import OuterRef, Exists
 from django.contrib.auth import get_user_model
 from .models import Trigger, UserTrigger, ActionLog
 from .tg_dj_bot import TG_DJ_Bot
+from celery import current_app
 # from .utils import send_botmenuelem, task_send_message_handler
 
 
-# @app.task
+@current_app.task
 def create_triggers():
     def get_duration_dict(trigger, elem, add_prefix=True):
         prefix = 'actionlog__'
@@ -102,7 +103,7 @@ def create_triggers():
 
 
 
-# @app.task
+@current_app.task
 def send_triggers(user_ids):
     dttm_now = timezone.now()
     UserTrigger.objects.filter(

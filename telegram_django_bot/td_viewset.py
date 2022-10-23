@@ -126,6 +126,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         else:
             raise ValueError(f'unknown chat_action {chat_action} {utrl}, {user}')
 
+        utrl = utrl.split('-')[0]   # log without params as to much varients
         add_log_action(self.user.id, utrl)
         return res
 
