@@ -216,7 +216,7 @@ class BotMenuElem(models.Model):
     )
 
     def __str__(self):
-        return f"BME ({self.id}) - { self.command[:32] or self.message[:32]}"
+        return f"BME ({self.id}) - { self.command[:32] if self.command else self.message[:32]}"
 
     def save(self, *args, **kwargs):
         # bot = telegram.Bot(TELEGRAM_TOKEN)
