@@ -352,7 +352,7 @@ class Trigger(AbstractActiveModel):
             if 'd' in part:
                 days = float(part.replace('d', ''))
             elif 'h' in part:
-                days = float(part.replace('h', ''))
+                hours = float(part.replace('h', ''))
             else:
                 raise ValueError(f'unknown format {part}')
 

@@ -290,13 +290,14 @@ class TG_DJ_Bot(BotDJ):
 
         return response, media_files_codes
 
-
-
-    def task_send_message_handler(bot, func, user, *args, **kwargs):
+    def task_send_message_handler(bot, user, func, func_args, func_kwargs):
         is_sent = False
         res_mess = None
         try:
-            res_mess = func(bot, *args, **kwargs)
+            if settings.USE_I18N:
+                translation.activate(user.language_code)
+
+            res_mess = func(*func_args, **func_kwargs)
             is_sent = True
             time.sleep(0.035)
 
@@ -313,7 +314,7 @@ class TG_DJ_Bot(BotDJ):
                 add_log_action(user.id, 'TYPE_BLOCKED')
 
             else:
-                print(user.id, func, args, kwargs)
+                print(user.id, func, func_args, func_kwargs)
                 print(e.with_traceback(sys.exc_info()[2]))
 
         except Exception as e:
@@ -326,7 +327,7 @@ class TG_DJ_Bot(BotDJ):
 
                 time.sleep(time_in_seconds)
             except Exception as ee:
-                print(ee.with_traceback(sys.exc_info()[2]), func, args, kwargs)
+                print(ee.with_traceback(sys.exc_info()[2]), func, func_args, func_kwargs)
                 time.sleep(0.5)
 
         return is_sent, res_mess
