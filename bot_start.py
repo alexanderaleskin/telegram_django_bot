@@ -14,7 +14,7 @@ from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
 from telegram_django_bot.tg_dj_bot import TG_DJ_Bot
 # from telega_bot.telega_handlers import ()
 
-
+from telegram.ext import MessageHandler, Filters
 from tests.settings import TELEGRAM_TOKEN
 import logging
 
@@ -23,16 +23,8 @@ def add_handlers(updater):
     dp = updater.dispatcher
 
     # dp.add_handler(CommandHandler("start", start))
-    # dp.add_handler(CommandHandler("goals", reply_show_goals))
-    # # dp.add_handler(CommandHandler("help", help))
-    # dp.add_handler(CommandHandler("menu", show_main_menu))
-    #
-    #
-    # dp.add_handler(MessageHandler(Filters.regex("^/g"), goal_info))
-    # dp.add_handler(MessageHandler(Filters.regex("^/d"), delete_report))
     #
     # dp.add_handler(CallbackQueryHandler(goal_info, pattern="^{}".format(GOAL_INFO_BUTTON)))
-    # dp.add_handler(CallbackQueryHandler(show_main_menu, pattern="^{}".format(MAIN_MENU_BUTTON)))
 
 
     dp.add_handler(RouterCallbackMessageCommandHandler())

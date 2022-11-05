@@ -184,7 +184,7 @@ class TG_DJ_Bot(BotDJ):
             raise ValueError(f'update and chat_id could be together None -- to which chat send message then?')
 
         chat_id = chat_id or update.effective_user.id
-        text = str(text)  # for internalization (django __proxy__ error)
+        # text = str(text)  # for internalization (django __proxy__ error)
 
         telegram_message_kwargs = copy.deepcopy(telegram_message_kwargs)
         if not 'parse_mode' in telegram_message_kwargs:
@@ -289,6 +289,38 @@ class TG_DJ_Bot(BotDJ):
             # todo: add support for group media
 
         return response, media_files_codes
+
+    def _message(
+        self,
+        endpoint: str,
+        data,
+        reply_to_message_id: int = None,
+        disable_notification=None,
+        reply_markup=None,
+        allow_sending_without_reply=None,
+        timeout=None,
+        api_kwargs=None,
+        protect_content=None,
+    ):
+
+        for field in ['text', 'caption']:
+            if field in data and hasattr(data[field], '__call__'):
+                data[field] = data[field].__call__()
+            elif data.get(field):
+                data[field] = str(data[field])
+
+        # print('_message', endpoint, data)
+        return super()._message(
+            endpoint,
+            data,
+            reply_to_message_id,
+            disable_notification,
+            reply_markup,
+            allow_sending_without_reply,
+            timeout,
+            api_kwargs,
+            protect_content
+        )
 
     def task_send_message_handler(bot, user, func, func_args, func_kwargs):
         is_sent = False

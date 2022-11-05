@@ -13,7 +13,8 @@ def me(bot, update, user):
         f"{user}",
         reply_markup=inlinemark([[
             inlinebutt(text=_('create category'), callback_data='cat/cr'),
-            inlinebutt(text=_('create entity'), callback_data='ent/cr')
+            inlinebutt(text=_('create entity'), callback_data='ent/cr'),
+            inlinebutt(text=_('user'), callback_data='us/se')
         ]])
     )
 

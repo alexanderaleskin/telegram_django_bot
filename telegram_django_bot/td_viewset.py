@@ -9,6 +9,9 @@ from django.db import models
 from django.forms.fields import ChoiceField, BooleanField
 from .utils import add_log_action
 from django.utils.translation import gettext as _
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from .forms import UserForm
 
 
 class TelegaViewSetMetaClass(type):
@@ -435,19 +438,41 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
     def generate_message_callback_data(self, *args):
         return self.prefix + self.construct_utrl(*args)
 
-    def generate_message_next_field_choice_buttons(self, next_field, func_response, choices, selected_variants, callback_path):
-        return list([
+    def generate_message_next_field_choice_buttons(
+            self,
+            next_field,
+            func_response,
+            choices,
+            selected_variants,
+            callback_path,
+            self_variant=True,
+            show_next_button=True,
+    ):
+        is_boolean_field = issubclass(type(self.telega_form.base_fields[next_field]), BooleanField)
+        is_choice_field = issubclass(type(self.telega_form.base_fields[next_field]), ChoiceField)
+        is_multichoice_field = self.telega_form.base_fields[next_field].__class__ == ModelMultipleChoiceField
+
+        buttons = list([
             [inlinebutt(
                 text=text if not value in selected_variants else f'✅ {text}',
                 callback_data=callback_path(value)
             )] for value, text in choices
         ])
 
+        if self_variant and not (is_choice_field or is_boolean_field):
+            buttons.append([
+                inlinebutt(text=_('Write the value'), callback_data=callback_path(self.WRITE_MESSAGE_VARIANT_SYMBOLS))
+            ])
+        if show_next_button and is_multichoice_field:
+            buttons.append([
+                inlinebutt(text=_('Next'), callback_data=callback_path(self.GO_NEXT_MULTICHOICE_SYMBOLS))
+            ])
+        return buttons
+
     def generate_message_next_field(self, next_field, mess='', func_response='create', instance_id=None):
         # import pdb;pdb.set_trace()
 
         is_choice_field = issubclass(type(self.telega_form.base_fields[next_field]), ChoiceField)
-        is_multichoice_field = self.telega_form.base_fields[next_field].__class__ == ModelMultipleChoiceField
 
         if is_choice_field or self.prechoice_fields_values.get(next_field):
             buttons = []
@@ -496,15 +521,6 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             buttons += self.generate_message_next_field_choice_buttons(
                 next_field, func_response, choices, selected_variants, callback_path
             )
-
-            if not is_choice_field and not issubclass(type(self.telega_form.base_fields[next_field]), BooleanField):
-                buttons.append([
-                    inlinebutt(text=_('Write the value'), callback_data=callback_path(self.WRITE_MESSAGE_VARIANT_SYMBOLS))
-                ])
-            if is_multichoice_field:
-                buttons.append([
-                    inlinebutt(text=_('Next'), callback_data=callback_path(self.GO_NEXT_MULTICHOICE_SYMBOLS))
-                ])
 
             if self.cancel_adding_button and func_response == 'create':
                 buttons.append([self.cancel_adding_button])
@@ -594,4 +610,41 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         mess = message % {'viewset_name': self.viewset_name, 'model_id': model_id}
 
         return self.CHAT_ACTION_MESSAGE, (mess, None)
+
+
+class UserViewSet(TelegaViewSet):
+    actions = ['change', 'show_elem']
+
+    queryset = get_user_model().objects.all()
+    telega_form = UserForm
+
+    prechoice_fields_values = {
+        "timezone": list([(f'{tm}:0:0', f'+{tm} UTC' if tm > 0 else f'{tm} UTC') for tm in range(-11, 13)]),
+        "telegram_language_code": settings.LANGUAGES,
+    }
+
+    def construct_utrl(self, *args):
+        return '!'.join(map(lambda x: str(x), args))  # ! instead -  because of negative value
+
+    def get_utrl_params(self, utrl):
+        return utrl.split('!')
+
+    def show_elem(self, model_id=None, mess=''):
+        _, (mess, buttons) = super().show_elem(self.user.id, mess)
+
+        return self.CHAT_ACTION_MESSAGE, (mess, buttons)
+
+    def generate_value_str(self, model, field, field_name, try_field='name'):
+        if field_name == 'timezone':
+            value = getattr(model, field_name, "")
+            value = int(value.total_seconds() // 3600)
+            return f'+{value} UTC' if value > 0 else f'{value} UTC'
+
+        else:
+            return super().generate_value_str(model, field, field_name, try_field)
+
+    def generate_message_next_field_choice_buttons(self, *args, **kwargs):
+        kwargs['self_variant'] = False
+        return super().generate_message_next_field_choice_buttons(*args, **kwargs)
+
 

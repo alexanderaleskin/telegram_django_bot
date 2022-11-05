@@ -1,7 +1,9 @@
 from django.forms.forms import BaseForm, DeclarativeFieldsMetaclass, ErrorList, ErrorDict
 from django.forms.models import BaseModelForm, ModelFormMetaclass, ModelMultipleChoiceField
-from django.forms import HiddenInput
+from django.forms import HiddenInput, CharField, DurationField
 from django.db import models
+from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
 
 # todo: PreChoise logic to fields
 # todo: support media
@@ -175,5 +177,34 @@ class TelegaForm(BaseTelegaForm, metaclass=DeclarativeFieldsMetaclass):
 
 class TelegaModelForm(BaseTelegaModelForm, metaclass=ModelFormMetaclass):
     """just for terminate metaclass"""
+
+
+
+class UserForm(TelegaModelForm):
+    form_name = _('User')
+
+    class Meta:
+        model = get_user_model()
+
+        fields = ['timezone', 'telegram_language_code', ]
+
+        labels = {
+            "timezone": _("Timezone"),
+            'telegram_language_code': _("Language"),
+        }
+
+    def save(self, commit=True, is_completed=True):
+        print(self.user.__dict__)
+        print(self.cleaned_data)
+        print(self.is_valid() and self.next_field is None and (is_completed or self.instance.pk))
+
+        if self.is_valid() and self.next_field is None and (is_completed or self.instance.pk):
+            # full valid form
+
+            BaseModelForm.save(self, commit=commit)
+            self.user.refresh_from_db()
+            self.user.clear_status()
+        else:
+            BaseTelegaForm.save(self, commit=commit)
 
 
