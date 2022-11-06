@@ -3,7 +3,10 @@ from django.forms.models import BaseModelForm, ModelFormMetaclass, ModelMultiple
 from django.forms import HiddenInput, CharField, DurationField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import translation
 from django.contrib.auth import get_user_model
+from django.conf import settings
+
 
 # todo: PreChoise logic to fields
 # todo: support media
@@ -194,16 +197,15 @@ class UserForm(TelegaModelForm):
         }
 
     def save(self, commit=True, is_completed=True):
-        print(self.user.__dict__)
-        print(self.cleaned_data)
-        print(self.is_valid() and self.next_field is None and (is_completed or self.instance.pk))
-
         if self.is_valid() and self.next_field is None and (is_completed or self.instance.pk):
             # full valid form
 
             BaseModelForm.save(self, commit=commit)
             self.user.refresh_from_db()
             self.user.clear_status()
+
+            if settings.USE_I18N:
+                translation.activate(self.user.language_code)
         else:
             BaseTelegaForm.save(self, commit=commit)
 
