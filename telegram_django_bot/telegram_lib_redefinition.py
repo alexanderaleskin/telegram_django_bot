@@ -13,6 +13,10 @@ class TelegramDjangoEncoder(json.JSONEncoder):
     def default(self, o):
         if issubclass(type(o), object) and o.__class__.__name__ == '__proxy__':
             return str(o)
+
+        elif hasattr(o, '__call__'):
+            return o.__call__()
+
         return super(TelegramDjangoEncoder, self).default(o)
 
 
