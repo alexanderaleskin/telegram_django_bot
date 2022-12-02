@@ -139,6 +139,13 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             self.queryset._prefetch_done = False
         return self.queryset
 
+    def _get_elem(self, model_or_pk):
+        if issubclass(type(model_or_pk), models.Model):
+            model = model_or_pk
+        else:
+            model = self.get_queryset().filter(pk=model_or_pk).first()
+        return model
+
     # def get_item(self, item):
     #     """ show info about item"""
 
@@ -231,10 +238,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         :return:
         """
 
-        if issubclass(type(model_or_pk), models.Model):
-            model = model_or_pk
-        else:
-            model = self.get_queryset().filter(pk=model_or_pk).first()
+        model = self._get_elem(model_or_pk)
 
         self.user.clear_status(commit=True)
 
@@ -247,10 +251,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         """delete item"""
 
         # import pdb;pdb.set_trace()
-        if issubclass(type(model_or_pk), models.Model):
-            model = model_or_pk
-        else:
-            model = self.get_queryset().filter(pk=model_or_pk).first()
+        model = self._get_elem(model_or_pk)
 
         if model:
             model.delete()
@@ -296,7 +297,14 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
                 value = choice[0][1]
         return value
 
-    def generate_show_fields(self, model):
+    def generate_show_fields(self, model, full_show=False):
+        """
+
+        :param model:
+        :param full_show: True for show_elem and false for show_list
+        :return:
+        """
+
         mess = ''
         for field_name, field in self.telega_form.base_fields.items():
             if type(field.widget) != HiddenInput:
@@ -363,15 +371,12 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         :return:
         """
 
-        if issubclass(type(model_or_pk), models.Model):
-            model = model_or_pk
-        else:
-            model = self.get_queryset().filter(pk=model_or_pk).first()
+        model = self._get_elem(model_or_pk)
 
         if model:
             if self.use_name_and_id_in_elem_showing:
                 mess += f'{self.viewset_name} #{model.pk} \n'
-            mess += self.generate_show_fields(model)
+            mess += self.generate_show_fields(model, full_show=True)
 
             buttons = self.generate_elem_buttons(model.pk)
 
@@ -617,6 +622,7 @@ class UserViewSet(TelegaViewSet):
 
     queryset = get_user_model().objects.all()
     telega_form = UserForm
+    use_name_and_id_in_elem_showing = False
 
     prechoice_fields_values = {
         "timezone": list([(f'{tm}:0:0', f'+{tm} UTC' if tm > 0 else f'{tm} UTC') for tm in range(-11, 13)]),
@@ -628,6 +634,9 @@ class UserViewSet(TelegaViewSet):
 
     def get_utrl_params(self, utrl):
         return utrl.split('!')
+
+    def get_queryset(self):
+        return super().get_queryset().filter(id=self.user.id)
 
     def show_elem(self, model_id=None, mess=''):
         _, (mess, buttons) = super().show_elem(self.user.id, mess)

@@ -42,6 +42,10 @@ class MESSAGE_FORMAT:
     AUDIO = 'A'
     VIDEO = 'V'
     GIF = 'G'
+    VOICE = 'TV'
+    VIDEO_NOTE = 'VN'
+    STICKER = 'S'
+    LOCATION = 'L'
     GROUP_MEDIA = 'GM'
 
     MESSAGE_FORMATS = (
@@ -51,6 +55,10 @@ class MESSAGE_FORMAT:
         (AUDIO, _('Audio')),
         (VIDEO, _('Video')),
         (GIF, _('GIF/animation')),
+        (VOICE, _('Voice')),
+        (VIDEO_NOTE, _('Video note')),
+        (STICKER, _('Sticker')),
+        (LOCATION, _('Location')),
         (GROUP_MEDIA, _('Media Group')),
     )
 
@@ -85,7 +93,7 @@ class TelegramUser(AbstractUser):
     id = models.BigIntegerField(primary_key=True)  # telegram id is id for models
     seed_code = models.IntegerField(default=_seed_code)
     telegram_username = models.CharField(max_length=64, null=True, blank=True)
-    telegram_language_code = models.CharField(max_length=2, default='en')
+    telegram_language_code = models.CharField(max_length=16, default='en')  # could be with dialects
 
     timezone = models.DurationField(default=timezone.timedelta(hours=3))
 

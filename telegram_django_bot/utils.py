@@ -42,12 +42,13 @@ def handler_decor(log_type='F'):
 
             bot = CallbackContext.bot
 
-            if update.callback_query:
-                user_details = update.callback_query.from_user
-            elif update.inline_query:
-                user_details = update.inline_query.from_user
-            else:
-                user_details = update.message.from_user
+            user_details = update.effective_user
+            # if update.callback_query:
+            #     user_details = update.callback_query.from_user
+            # elif update.inline_query:
+            #     user_details = update.inline_query.from_user
+            # else:
+            #     user_details = update.message.from_user
 
             User = get_user_model()
             user, created = User.objects.get_or_create(
