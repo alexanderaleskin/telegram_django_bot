@@ -345,10 +345,10 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         if 'delete' in self.actions:
             buttons.append(
                 [inlinebutt(
-                    text=_('❌ Delete #%(model_id)s') % {'model_id': model_id},
+                    text=_('❌ Delete #%(model_id)s') % {'model_id': model.id},
                     callback_data=self.generate_message_callback_data(
                         self.command_routings['command_routing_delete'],
-                        model_id,
+                        model.id,
                     )
                 )]
             )
