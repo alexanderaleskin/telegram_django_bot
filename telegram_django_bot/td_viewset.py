@@ -312,7 +312,8 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
 
         return mess
 
-    def generate_elem_buttons(self, model_id, elem_per_raw=2):
+    def generate_elem_buttons(self, model, elem_per_raw=2):
+
         buttons = []
         if 'change' in self.actions:
             if type(self.updating_fields) == list and len(self.updating_fields):
@@ -332,7 +333,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
                             text=f'🔄 {self.telega_form.base_fields[field].label}',
                             callback_data=self.generate_message_callback_data(
                                 self.command_routings['command_routing_change'],
-                                model_id,
+                                model.id,
                                 field,
                             )
                         )
@@ -378,7 +379,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
                 mess += f'{self.viewset_name} #{model.pk} \n'
             mess += self.generate_show_fields(model, full_show=True)
 
-            buttons = self.generate_elem_buttons(model.pk)
+            buttons = self.generate_elem_buttons(model)
 
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
@@ -427,7 +428,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
                 mess += '\n\n'
                 buttons += [
                     [inlinebutt(
-                        text=f'{it_m}. {self.viewset_name} #{ model.pk}',
+                        text=self.gm_show_list_button_names(it_m, model),
                         callback_data=self.generate_message_callback_data(
                             self.command_routings['command_routing_show_elem'],  model.pk,
                         )
@@ -439,9 +440,17 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
 
         return self.CHAT_ACTION_MESSAGE, (mess, buttons)
 
+    def gm_show_list_button_names(self, it_m, model):
+        return f'{it_m}. {self.viewset_name} #{ model.pk}'
 
     def generate_message_callback_data(self, *args):
         return self.prefix + self.construct_utrl(*args)
+
+    def gm_callback_data(self, method, *args):
+        return self.generate_message_callback_data(
+            self.command_routings[f'command_routing_{method}'],
+            *args
+        )
 
     def generate_message_next_field_choice_buttons(
             self,
