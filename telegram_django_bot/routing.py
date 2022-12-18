@@ -108,11 +108,13 @@ class RouterCallbackMessageCommandHandler(Handler):
         :return:
         """
         if isinstance(update, telegram.Update) and (update.effective_message or update.callback_query):
-            if not self.only_utrl:
+            callback = self.get_callback_utrl(update)
+            if callback:
                 return True
-            else:
-                callback = self.get_callback_utrl(update)
-                if callback:
+            elif not self.only_utrl:
+                if update.message and update.message.text and update.message.text[0] == '/':
+                    # if it is a command then it should be  early in handlers
+                    # or in BME (then return True
                     return True
         return None
 

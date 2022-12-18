@@ -18,7 +18,7 @@ class CategoryViewSet(TelegaViewSet):
     )
 
     generate_function_main_mess = {
-        'generate_message_next_field': '\n',
+        # 'generate_message_next_field': '\n',
         'generate_message_success_created': 'ff %(viewset_name)s\n\n',
     }
 
