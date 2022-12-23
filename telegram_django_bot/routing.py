@@ -116,6 +116,8 @@ class RouterCallbackMessageCommandHandler(Handler):
                     # if it is a command then it should be  early in handlers
                     # or in BME (then return True
                     return True
+                elif update.callback_query:
+                    return True
         return None
 
     def handle_update(

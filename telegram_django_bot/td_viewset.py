@@ -256,9 +256,9 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         if model:
             model.delete()
 
-            mess = _('The %(viewset_name)s  #%(model_id)s is successfully deleted.') % {
+            mess = _('The %(viewset_name)s  %(model_id)s is successfully deleted.') % {
                 'viewset_name': self.viewset_name,
-                'model_id': model_or_pk,
+                'model_id': f'#{model.id}' or '',
             }
 
             buttons = None
