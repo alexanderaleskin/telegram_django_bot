@@ -52,6 +52,10 @@ class EntityViewSet(TelegaViewSet):
     queryset = Entity.objects.all()
     viewset_name = _('Entity')
 
+    meta_texts_dict = {
+        'generate_message_next_field': _('Redefine %(label)s\n\n'),
+    }
+
 
 class OrderViewSet(TelegaViewSet):
     telega_form = OrderForm

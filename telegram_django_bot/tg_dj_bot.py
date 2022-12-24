@@ -1,5 +1,6 @@
 import time
 import sys
+import logging
 from telegram import (
     Update,
     InputMediaPhoto,
@@ -10,11 +11,11 @@ from telegram import (
     Message,
     error,
 )
-from .models import BotMenuElem, BotMenuElemAttrText, MESSAGE_FORMAT
-from .utils import add_log_action, ERROR_MESSAGE
 from django.conf import settings  # LANGUAGES, USE_I18N
-import copy
 from django.utils import translation
+
+from .models import BotMenuElem, MESSAGE_FORMAT
+from .utils import add_log_action, ERROR_MESSAGE
 from .telegram_lib_redefinition import (
     InlineKeyboardMarkupDJ,
     BotDJ,
@@ -36,35 +37,6 @@ class TG_DJ_Bot(BotDJ):
 
         if not marked_buttons:
             marked_buttons = None
-
-        # print(update.callback_query.__dict__, update.callback_query.message.__dict__, update.callback_query.message.message_id)
-        # import pdb
-        # pdb.set_trace()
-
-        # if update.callback_query and (not only_send):
-        #     res_mess = bot.edit_message_text(
-        #         mess,
-        #         update.effective_user.id,
-        #         message_id=update.callback_query.message.message_id,
-        #         parse_mode='HTML',
-        #         reply_markup=marked_buttons,
-        #         timeout=timeout,
-        #     )
-        # else:
-        #     res_mess = bot.send_message(
-        #         update.effective_user.id,
-        #         mess,
-        #         parse_mode='HTML',
-        #         reply_markup=marked_buttons,
-        #         timeout=timeout,
-        #     )message_format:str=MESSAGE_FORMAT.TEXT,
-        #             text:str=None,
-        #             media_files_list:list=None,
-        #             update:telegram.Update=None,
-        #             chat_id:int=None,
-        #             only_send=False,
-        #
-        #             **telegram_message_kwargs
 
         kwargs['reply_markup'] = marked_buttons
 
@@ -186,7 +158,7 @@ class TG_DJ_Bot(BotDJ):
         chat_id = chat_id or update.effective_user.id
         # text = str(text)  # for internalization (django __proxy__ error)
 
-        telegram_message_kwargs = copy.deepcopy(telegram_message_kwargs)
+        telegram_message_kwargs = telegram_message_kwargs.copy()
         if not 'parse_mode' in telegram_message_kwargs:
             telegram_message_kwargs['parse_mode'] = 'HTML'
 
@@ -309,7 +281,6 @@ class TG_DJ_Bot(BotDJ):
             elif data.get(field):
                 data[field] = str(data[field])
 
-        # print('_message', endpoint, data)
         return super()._message(
             endpoint,
             data,
@@ -334,32 +305,34 @@ class TG_DJ_Bot(BotDJ):
             time.sleep(0.035)
 
         except error.Unauthorized as e:
-            print('blocked \n\n', e, user.id)
+            logging.info(f'user blocked {e}, {user.id}\n')
             user.is_active = False
             user.save()
             add_log_action(user.id, 'TYPE_BLOCKED')
 
-        except error.BadRequest as e:
-            if e.message == 'Chat not found':
+        except error.BadRequest as ee:
+            if ee.message == 'Chat not found':
                 user.is_active = False
                 user.save()
                 add_log_action(user.id, 'TYPE_BLOCKED')
 
             else:
-                print(user.id, func, func_args, func_kwargs)
-                print(e.with_traceback(sys.exc_info()[2]))
+                logging.error(
+                    f'{ee.with_traceback(sys.exc_info()[2])} \n user={user.id}, {func}, {func_args}, {func_kwargs}'
+                )
 
-        except Exception as e:
-            print('error while sending\n\n', e, user.id)
+        except Exception as ee:
+            logging.error(
+                f'{ee.with_traceback(sys.exc_info()[2])} \n user={user.id}, {func}, {func_args}, {func_kwargs}'
+            )
             time_in_seconds = 0.4
             try:
-                if 'Flood control exceeded. Retry in ' in str(e):
-                    time_in_seconds = str(e)[len('Flood control exceeded. Retry in '):].split()[0]
+                if 'Flood control exceeded. Retry in ' in str(ee):
+                    time_in_seconds = str(ee)[len('Flood control exceeded. Retry in '):].split()[0]
                     time_in_seconds = float(time_in_seconds)
 
                 time.sleep(time_in_seconds)
-            except Exception as ee:
-                print(ee.with_traceback(sys.exc_info()[2]), func, func_args, func_kwargs)
+            except Exception as e:
                 time.sleep(0.5)
 
         return is_sent, res_mess

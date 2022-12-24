@@ -105,7 +105,7 @@ class BaseTelegaForm(BaseForm):
         """
         Clean all of self.data and populate self._errors and self.cleaned_data.
         """
-        self._errors = TelegaErrorDict() # only for change TelegaErrorDict()
+        self._errors = TelegaErrorDict()  # only for change TelegaErrorDict()
         if not self.is_bound:  # Stop further processing.
             return
         self.cleaned_data = {}
@@ -175,11 +175,11 @@ class BaseTelegaModelForm(BaseTelegaForm, BaseModelForm):
 
 
 class TelegaForm(BaseTelegaForm, metaclass=DeclarativeFieldsMetaclass):
-    """just for terminate metaclass"""
+    """just for executing metaclass"""
 
 
 class TelegaModelForm(BaseTelegaModelForm, metaclass=ModelFormMetaclass):
-    """just for terminate metaclass"""
+    """just for executing metaclass"""
 
 
 

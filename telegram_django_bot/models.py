@@ -3,9 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core import validators
 import random
 from django.utils import timezone
-from model_utils import FieldTracker
 import json
-# from timezone_field import TimeZoneField
 from django.conf import settings
 from django.db.models import QuerySet
 from django.core.serializers.json import DjangoJSONEncoder
@@ -32,7 +30,6 @@ class TelegramDjangoJsonDecoder(json.JSONDecoder):
             return super().decode(s, *args, **kwargs)
         else:
             return dt_object
-
 
 
 class MESSAGE_FORMAT:
@@ -100,6 +97,7 @@ class TelegramUser(AbstractUser):
     current_utrl = models.CharField(max_length=64, default='', blank=True) # todo: add verify comparisson current_utrl and current_utrl_context_db/current_utrl_form_db
     current_utrl_code_dttm = models.DateTimeField(null=True, blank=True)
     current_utrl_context_db = models.CharField(max_length=4096, default='{}', blank=True)
+
     # form structure {'form_name': '', 'form_data': {}}
     current_utrl_form_db = models.CharField(max_length=4096, default='{}', blank=True)
 
@@ -123,7 +121,6 @@ class TelegramUser(AbstractUser):
 
     def save_form_in_db(self, form_name, form_data, do_save=True):
         db_form_data = {}
-        # import pdb;pdb.set_trace()
 
         for key, value in form_data.items():
             print(key, value)
@@ -186,7 +183,7 @@ class ActionLog(models.Model):
 
 class BotMenuElem(models.Model):
     """
-    actually subscribe, not payment
+
     """
 
     command = models.TextField(  # for multichoice start
@@ -367,9 +364,9 @@ class Trigger(AbstractActiveModel):
         return timezone.timedelta(days=days, hours=hours)
 
 
-
 class UserTrigger(TelegramAbstractActiveModel):
     trigger = models.ForeignKey(Trigger, on_delete=models.PROTECT)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
 
     is_sent = models.BooleanField(default=False)
+

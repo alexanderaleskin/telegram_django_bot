@@ -1,4 +1,4 @@
-
+import logging
 from .models import BotMenuElem
 from .utils import handler_decor
 from .td_viewset import TelegaViewSet
@@ -96,7 +96,7 @@ class RouterCallbackMessageCommandHandler(Handler):
 
                 user = get_user_model().objects.filter(id=user_details.id).first()
                 if user:
-                    print('user.current_utrl', user.current_utrl)
+                    logging.info('user.current_utrl', user.current_utrl)
                     if user.current_utrl:
                         callback_func = telega_resolve(user.current_utrl, self.utrl_conf)
         return callback_func

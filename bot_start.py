@@ -1,4 +1,4 @@
-
+import logging, sys
 from telegram.ext import (
     Updater,
 )
@@ -32,13 +32,14 @@ def add_handlers(updater):
 
 
 def main():
-    # logging.basicConfig(
-    #     filename='bot.logs',
-    #     filemode='a',
-    #     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-    #     datefmt='%Y.%m.%d %H:%M:%S',
-    #     level=logging.INFO
-    # )
+    logging.basicConfig(
+        # filename='bot.logs',
+        # filemode='a',
+        stream=sys.stdout,
+        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+        datefmt='%Y.%m.%d %H:%M:%S',
+        level=logging.INFO
+    )
 
     updater = Updater(bot=TG_DJ_Bot(TELEGRAM_TOKEN), workers=8)
     add_handlers(updater)

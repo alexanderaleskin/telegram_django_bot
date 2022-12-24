@@ -284,7 +284,7 @@ class ButtonPagination:
 
         return telega_buttons
 
-# todo: rewrite code
+
 class CalendarPagination:
     def __init__(
             self,
