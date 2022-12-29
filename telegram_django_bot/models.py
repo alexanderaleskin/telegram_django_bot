@@ -13,23 +13,30 @@ from telegram import InlineKeyboardButton  # no lazy text so standart possible t
 
 
 class TelegramDjangoJsonDecoder(json.JSONDecoder):
-    def decode(self, s, *args, **kwargs):
-        dt_object = None
-        try:
-            dt_object = datetime.datetime.fromisoformat(s)
-        except ValueError:
-            try:
-                dt_object = datetime.date.fromisoformat(s)
-            except ValueError:
-                try:
-                    dt_object = datetime.time.fromisoformat(s)
-                except ValueError:
-                    pass
+    def __init__(self, *args, **kwargs):
+        super(TelegramDjangoJsonDecoder, self).__init__(*args, object_hook=self.object_hook_decoder, **kwargs)
 
-        if dt_object is None:
-            return super().decode(s, *args, **kwargs)
-        else:
-            return dt_object
+    def object_hook_decoder(self, sub_dict, *args, **kwargs):
+        # so it works only for dictionary data (if datetime is in list it will not be worked)
+        for key in sub_dict.keys():
+            value = sub_dict[key]
+            dt_object = None
+            if type(value) == str:
+                try:
+                    dt_object = datetime.time.fromisoformat(value)
+                except ValueError:
+                    try:
+                        dt_object = datetime.date.fromisoformat(value)
+                    except ValueError:
+                        try:
+                            dt_object = datetime.datetime.fromisoformat(value)
+                        except ValueError:
+                            pass
+
+                if dt_object:
+                    sub_dict[key] = dt_object
+
+        return sub_dict
 
 
 class MESSAGE_FORMAT:
@@ -123,7 +130,6 @@ class TelegramUser(AbstractUser):
         db_form_data = {}
 
         for key, value in form_data.items():
-            print(key, value)
             if issubclass(value.__class__, models.Model):
                 db_value = value.pk
             elif (type(value) in [list, QuerySet]) and all(map(lambda x: issubclass(x.__class__, models.Model), value)):
@@ -137,6 +143,14 @@ class TelegramUser(AbstractUser):
             'form_name': form_name,
             'form_data': db_form_data,
         }, cls=DjangoJSONEncoder)
+        if do_save:
+            self.save()
+
+        if hasattr(self, '_current_utrl_form'):
+            delattr(self, '_current_utrl_form')
+
+    def save_context_in_db(self, context, do_save=True):
+        self.current_utrl_context_db = json.dumps(context, cls=DjangoJSONEncoder)
         if do_save:
             self.save()
 
@@ -201,7 +215,7 @@ class BotMenuElem(models.Model):
     )
 
     callbacks_db = models.TextField(
-        null=True, blank=True,
+        default='[]',
         help_text=_('List of regular expressions (so far only an explicit list) for callbacks that call this menu block')
     )
 
@@ -211,7 +225,7 @@ class BotMenuElem(models.Model):
     message_format = models.CharField(max_length=2, choices=MESSAGE_FORMAT.MESSAGE_FORMATS, default=MESSAGE_FORMAT.TEXT)
     message = models.TextField(help_text=_('Text message'))
     buttons_db = models.TextField(
-        null=True, blank=True,
+        default='[]',
         help_text=_('InlineKeyboardMarkup buttons list, ({"text": , "url" or "callback_data"})')
     )
     media = models.FileField(help_text=_('File attachment to the message'), null=True, blank=True)
@@ -289,12 +303,13 @@ class BotMenuElem(models.Model):
             translated_text__isnull=False,
         ).first()
 
-        need_translation = language != settings.LANGUAGE_CODE
+        need_translation = language != settings.LANGUAGE_CODE and settings.USE_I18N
         buttons = []
 
         for row_elem in self.buttons:
             row_buttons = []
-            for elem in row_elem:
+            for item_in_row in row_elem:
+                elem = dict(item_in_row)
                 if elem.get('text') and need_translation and (translate_model := get_translate_model(elem['text'])):
                     elem['text'] = translate_model.translated_text
                 row_buttons.append(InlineKeyboardButton(**elem))
@@ -311,7 +326,7 @@ class BotMenuElemAttrText(models.Model):
     dttm_added = models.DateTimeField(default=timezone.now)
     bot_menu_elem = models.ForeignKey(BotMenuElem, null=False, on_delete=models.CASCADE)
 
-    language_code = models.CharField(max_length=2)
+    language_code = models.CharField(max_length=16)
     default_text = models.TextField(
         help_text=_('The text which should be translate')
     )

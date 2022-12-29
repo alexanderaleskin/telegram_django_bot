@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class BaseConfig(AppConfig):
+class TelegramDjangoBotConfig(AppConfig):
     name = 'telegram_django_bot'

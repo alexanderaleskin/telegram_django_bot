@@ -76,16 +76,6 @@ class TG_DJ_Bot(BotDJ):
 
             if menu_elem.message_format != MESSAGE_FORMAT.TEXT:
                 media_file = menu_elem.telegram_file_code or open(menu_elem.media.path, 'rb')
-                # if menu_elem.message_format == MESSAGE_FORMAT.PHOTO:
-                #     media_file = telegram.InputMediaPhoto(media_file)
-                # elif menu_elem.message_format == MESSAGE_FORMAT.VIDEO:
-                #     media_file = telegram.InputMediaVideo(media_file)
-                # elif menu_elem.message_format == MESSAGE_FORMAT.AUDIO:
-                #     media_file = telegram.InputMediaAudio(media_file)
-                # elif menu_elem.message_format == MESSAGE_FORMAT.GIF:
-                #     media_file = telegram.InputMediaAnimation(media_file)
-                # else:  # menu_elem.message_format == MESSAGE_FORMAT.DOCUMENT:
-                #     media_file = telegram.InputMediaDocument(media_file)
 
                 media_files_list = [media_file]
 
@@ -123,7 +113,8 @@ class TG_DJ_Bot(BotDJ):
         :param media_files_list: for send_media_group must be prepared with InputMediaPhoto, InputMediaVideo, InputMediaDocument, InputMediaAudio
         :param update:
         :param chat_id:
-        :param only_send:
+        :param only_send: if true then send new message. if callback_query is exist -- then delete previous message
+
 
         telegram_message_kwargs - parse_mode, timeout, reply_markup, disable_web_page_preview, disable_notification and maybe other
         :return:
@@ -204,7 +195,7 @@ class TG_DJ_Bot(BotDJ):
                 media_file = input_media(
                     media_files_list[0],
                     caption=text,
-                    parse_mode= telegram_message_kwargs.pop('parse_mode', None)
+                    parse_mode=telegram_message_kwargs.pop('parse_mode', None)  # fixme: why pop?
                 )
 
                 response = bot.edit_message_media(
@@ -239,6 +230,14 @@ class TG_DJ_Bot(BotDJ):
                         telega_func = bot.send_video
                     elif message_format == MESSAGE_FORMAT.GIF:
                         telega_func = bot.send_animation
+                    elif message_format == MESSAGE_FORMAT.VIDEO_NOTE:
+                        telega_func = bot.send_video_note
+                    elif message_format == MESSAGE_FORMAT.VOICE:
+                        telega_func = bot.send_voice
+                    elif message_format == MESSAGE_FORMAT.STICKER:
+                        telega_func = bot.send_sticker
+                    elif message_format == MESSAGE_FORMAT.LOCATION:
+                        raise NotImplementedError()
                     # elif message_format == MESSAGE_FORMAT.DOCUMENT:
                     else:
                         telega_func = bot.send_document

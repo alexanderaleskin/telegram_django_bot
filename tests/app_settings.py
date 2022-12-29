@@ -2,13 +2,18 @@ import os
 import sys
 from django.utils.translation import gettext_lazy as _
 
+import environ
+env = environ.Env()
+environ.Env.read_env()
+
+sys.path.append('..')
 
 DIRNAME = os.path.dirname(__file__)
 
 DEBUG = True
-DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "mydatabase"}}
+DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "db.sqlite"}}
 
-AUTH_USER_MODEL = 'myapp.User'
+AUTH_USER_MODEL = 'test_app.User'
 
 
 INSTALLED_APPS = (
@@ -18,9 +23,9 @@ INSTALLED_APPS = (
     "django.contrib.messages",
     "django.contrib.sessions",
     "django.contrib.staticfiles",
-    "telegram_django_bot",
     "django_json_widget",
-    "tests.myapp",
+    "telegram_django_bot",
+    "test_app",
 )
 
 STATIC_URL = "/static/"
@@ -49,13 +54,15 @@ TEMPLATES = [
     },
 ]
 
-LANGUAGE_CODE = 'ru-RU'
+LANGUAGE_CODE = 'en'
 USE_I18N = True
 
-TELEGRAM_TOKEN = '604076170:AAEOy1JQCZ0n-d3LT7DJGjbMaHCla0N4Vag'
-TELEGRAM_ROOT_UTRLCONF = 'tests.myapp.utrls'
 
-ROOT_URLCONF = 'tests.urls'
+TELEGRAM_TOKEN = env('TELEGRAM_TOKEN')
+TELEGRAM_TEST_USER_IDS = list([int(val) for val in env.list('TELEGRAM_TEST_USER_IDS')])
+TELEGRAM_ROOT_UTRLCONF = 'test_app.utrls'
+
+ROOT_URLCONF = 'urls'
 
 LOCALE_PATHS = [
     os.path.join(DIRNAME, 'locale')
@@ -63,7 +70,7 @@ LOCALE_PATHS = [
 
 LANGUAGES = [
     ('en', _('English')),
-    # ('de', _('German')),
+    ('de', _('German')),
     ('ru', _('Russian'))
 ]
 

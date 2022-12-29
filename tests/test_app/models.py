@@ -7,7 +7,7 @@ class User(TelegramUser):
 
 
 class NamedClass(models.Model):
-    name = models.CharField(max_length=128, help_text='Введите данные без ошибок')
+    name = models.CharField(max_length=128, help_text='max length 128')
     is_visable = models.BooleanField(default=True)
 
     class Meta:
@@ -17,18 +17,20 @@ class NamedClass(models.Model):
 class Category(NamedClass):
     """category """
 
-    info = models.TextField(null=True, blank=True)
-    some_int = models.IntegerField(null=True, blank=True)
-    some_float = models.FloatField(null=True, blank=True)
-    some_demical = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)
+    info = models.TextField(null=True, blank=True, help_text='extra info about category')
+
 
 class Size(NamedClass):
     """size"""
 
+
 class Entity(NamedClass):
-    price = models.DecimalField(max_digits=16, decimal_places=2, help_text='a')
+    price = models.DecimalField(max_digits=16, decimal_places=2, help_text='')
     category = models.ForeignKey(Category, on_delete=models.PROTECT)
     sizes = models.ManyToManyField(Size, blank=True, related_name='entities', through='EntitySizeAmount')
+
+    author_id = models.PositiveIntegerField(help_text='write positive number')
+    used_material = models.FloatField(blank=True, null=True, help_text='float field')
 
 
 class EntitySizeAmount(models.Model):
@@ -44,9 +46,9 @@ class Order(models.Model):
     STATUS_COMPLETED = 'D'
 
     STATUSES = (
-        (STATUS_CREATED, STATUS_CREATED),
-        (STATUS_WAITING, STATUS_WAITING),
-        (STATUS_COMPLETED, STATUS_COMPLETED),
+        (STATUS_CREATED, '✔️ ️Created'),
+        (STATUS_WAITING, '⏱ Waiting'),
+        (STATUS_COMPLETED, '✅ Completed'),
     )
 
     dttm_added = models.DateTimeField(auto_now_add=True)
@@ -54,6 +56,7 @@ class Order(models.Model):
     status = models.CharField(max_length=32, choices=STATUSES)
 
     entities = models.ManyToManyField(Entity, blank=True)
+
 
 class BoughtItem(models.Model):
     entity_size = models.ForeignKey(EntitySizeAmount, on_delete=models.PROTECT)
