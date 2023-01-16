@@ -17,9 +17,13 @@ from .permissions import AllowAny
 
 
 class TelegaViewSetMetaClass(type):
+    """
+    Needed for inheritance information of command_routings_<func> and meta_texts_dict
+
+    """
+
     def __new__(mcs, name, bases, attrs):
         # Collect fields from current class.
-        # print(name, bases, attrs)
 
         current_fields = []
         for key, value in list(attrs.items()):

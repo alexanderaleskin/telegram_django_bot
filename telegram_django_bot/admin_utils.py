@@ -14,8 +14,13 @@ class CustomRelatedOnlyDropdownFilter(RelatedOnlyDropdownFilter):
 
 class DefaultOverrideAdminWidgetsForm(forms.ModelForm):
     json_fields = []
+    list_json_fields = []
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.json_fields:
             self.fields[field].widget = JSONEditorWidget()
+
+        for field in self.list_json_fields:
+            self.fields[field].widget = JSONEditorWidget(attrs={"value": "[]"})
 

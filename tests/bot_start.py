@@ -4,29 +4,16 @@ from telegram.ext import (
 )
 
 import os, django
-
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tests.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app_settings')
 django.setup()
-
+from django.conf import settings
 
 from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
 from telegram_django_bot.tg_dj_bot import TG_DJ_Bot
-# from telega_bot.telega_handlers import ()
-
-from telegram.ext import MessageHandler, Filters
-from tests.settings import TELEGRAM_TOKEN
-import logging
 
 
 def add_handlers(updater):
     dp = updater.dispatcher
-
-    # dp.add_handler(CommandHandler("start", start))
-    #
-    # dp.add_handler(CallbackQueryHandler(goal_info, pattern="^{}".format(GOAL_INFO_BUTTON)))
-
-
     dp.add_handler(RouterCallbackMessageCommandHandler())
     # dp.add_handler(MessageHandler(Filters.text, message_written))
 
@@ -41,7 +28,7 @@ def main():
         level=logging.INFO
     )
 
-    updater = Updater(bot=TG_DJ_Bot(TELEGRAM_TOKEN), workers=8)
+    updater = Updater(bot=TG_DJ_Bot(settings.TELEGRAM_TOKEN), workers=8)
     add_handlers(updater)
     updater.start_polling()
     updater.idle()

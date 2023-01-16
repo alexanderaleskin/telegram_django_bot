@@ -1,25 +1,15 @@
-from django.forms.models import modelform_factory
 from django import forms
+from django.utils.translation import gettext, gettext_lazy
 from telegram_django_bot import forms as td_forms
 from .models import Category, Size, Entity, Order
 
 
-class ff(td_forms.TelegaForm):
-    f1 = forms.IntegerField()
-    f2 = forms.CharField()
-    f3 = forms.FloatField()
-
-
-class dd(ff):
-    f4 = forms.IntegerField()
-
-
 class CategoryForm(td_forms.TelegaModelForm):
-    form_name = 'Категория'
+    form_name = gettext_lazy('Category')
 
     class Meta:
         model = Category
-        fields = ['name', 'info', 'some_int']
+        fields = ['name', 'info',]
 
         labels = {
             "name": "Название категории",

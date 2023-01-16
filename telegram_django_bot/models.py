@@ -1,3 +1,5 @@
+import logging
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core import validators
@@ -13,23 +15,30 @@ from telegram import InlineKeyboardButton  # no lazy text so standart possible t
 
 
 class TelegramDjangoJsonDecoder(json.JSONDecoder):
-    def decode(self, s, *args, **kwargs):
-        dt_object = None
-        try:
-            dt_object = datetime.datetime.fromisoformat(s)
-        except ValueError:
-            try:
-                dt_object = datetime.date.fromisoformat(s)
-            except ValueError:
-                try:
-                    dt_object = datetime.time.fromisoformat(s)
-                except ValueError:
-                    pass
+    def __init__(self, *args, **kwargs):
+        super(TelegramDjangoJsonDecoder, self).__init__(*args, object_hook=self.object_hook_decoder, **kwargs)
 
-        if dt_object is None:
-            return super().decode(s, *args, **kwargs)
-        else:
-            return dt_object
+    def object_hook_decoder(self, sub_dict, *args, **kwargs):
+        # so it works only for dictionary data (if datetime is in list it will not be worked)
+        for key in sub_dict.keys():
+            value = sub_dict[key]
+            dt_object = None
+            if type(value) == str:
+                try:
+                    dt_object = datetime.time.fromisoformat(value)
+                except ValueError:
+                    try:
+                        dt_object = datetime.date.fromisoformat(value)
+                    except ValueError:
+                        try:
+                            dt_object = datetime.datetime.fromisoformat(value)
+                        except ValueError:
+                            pass
+
+                if dt_object:
+                    sub_dict[key] = dt_object
+
+        return sub_dict
 
 
 class MESSAGE_FORMAT:
@@ -123,7 +132,6 @@ class TelegramUser(AbstractUser):
         db_form_data = {}
 
         for key, value in form_data.items():
-            print(key, value)
             if issubclass(value.__class__, models.Model):
                 db_value = value.pk
             elif (type(value) in [list, QuerySet]) and all(map(lambda x: issubclass(x.__class__, models.Model), value)):
@@ -137,6 +145,14 @@ class TelegramUser(AbstractUser):
             'form_name': form_name,
             'form_data': db_form_data,
         }, cls=DjangoJSONEncoder)
+        if do_save:
+            self.save()
+
+        if hasattr(self, '_current_utrl_form'):
+            delattr(self, '_current_utrl_form')
+
+    def save_context_in_db(self, context, do_save=True):
+        self.current_utrl_context_db = json.dumps(context, cls=DjangoJSONEncoder)
         if do_save:
             self.save()
 
@@ -157,6 +173,18 @@ class TelegramUser(AbstractUser):
             return self.telegram_language_code
         return settings.LANGUAGE_CODE
 
+    def save(self, *args, **kwargs):
+        if self.id is None and self.is_staff:
+            id_num = 1
+            while self.__class__.objects.filter(id=id_num).count():
+                id_num += 1
+
+            self.id = id_num
+
+            logging.warning(f"Try to save user without ID. For staff the smallest unused ID will be used: {id_num}")
+
+        return super(TelegramUser, self).save(*args, **kwargs)
+            
 
 class TeleDeepLink(models.Model):
     title = models.CharField(max_length=64, default='', blank=True)
@@ -187,7 +215,7 @@ class BotMenuElem(models.Model):
     """
 
     command = models.TextField(  # for multichoice start
-        unique=True, null=True, blank=True,
+        null=True, blank=True,  # todo: add manual check
         help_text=_('Bot command that can call this menu block')
     )
 
@@ -201,7 +229,7 @@ class BotMenuElem(models.Model):
     )
 
     callbacks_db = models.TextField(
-        null=True, blank=True,
+        default='[]',
         help_text=_('List of regular expressions (so far only an explicit list) for callbacks that call this menu block')
     )
 
@@ -211,8 +239,11 @@ class BotMenuElem(models.Model):
     message_format = models.CharField(max_length=2, choices=MESSAGE_FORMAT.MESSAGE_FORMATS, default=MESSAGE_FORMAT.TEXT)
     message = models.TextField(help_text=_('Text message'))
     buttons_db = models.TextField(
-        null=True, blank=True,
-        help_text=_('InlineKeyboardMarkup buttons list, ({"text": , "url" or "callback_data"})')
+        default='[]',
+        help_text=_(
+            'InlineKeyboardMarkup buttons structure (double list of dict), where each button(dict) has next format: '
+            '{"text": "text", "url": "google.com"} or {"text":"text", "callback_data": "data"})'
+        )
     )
     media = models.FileField(help_text=_('File attachment to the message'), null=True, blank=True)
     telegram_file_code = models.CharField(
@@ -289,12 +320,13 @@ class BotMenuElem(models.Model):
             translated_text__isnull=False,
         ).first()
 
-        need_translation = language != settings.LANGUAGE_CODE
+        need_translation = language != settings.LANGUAGE_CODE and settings.USE_I18N
         buttons = []
 
         for row_elem in self.buttons:
             row_buttons = []
-            for elem in row_elem:
+            for item_in_row in row_elem:
+                elem = dict(item_in_row)
                 if elem.get('text') and need_translation and (translate_model := get_translate_model(elem['text'])):
                     elem['text'] = translate_model.translated_text
                 row_buttons.append(InlineKeyboardButton(**elem))
@@ -311,7 +343,7 @@ class BotMenuElemAttrText(models.Model):
     dttm_added = models.DateTimeField(default=timezone.now)
     bot_menu_elem = models.ForeignKey(BotMenuElem, null=False, on_delete=models.CASCADE)
 
-    language_code = models.CharField(max_length=2)
+    language_code = models.CharField(max_length=16)
     default_text = models.TextField(
         help_text=_('The text which should be translate')
     )

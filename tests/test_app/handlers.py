@@ -8,7 +8,7 @@ from django.utils.translation import gettext as _
 
 @handler_decor()
 def me(bot, update, user):
-    bot.send_message(
+    return bot.send_message(
         user.id,
         f"{user}",
         reply_markup=inlinemark([[

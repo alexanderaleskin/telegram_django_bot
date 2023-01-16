@@ -74,20 +74,21 @@ def handler_decor(log_type='F'):
             if settings.USE_I18N:
                 translation.activate(user.language_code)
 
+            raise_error = None
             try:
                 res = func(bot, update, user)
             except telegram.error.BadRequest as error:
                 if 'Message is not modified:' in error.message:
-                    pass
+                    res = None
                 else:
                     res = [bot.send_message(user.id, str(ERROR_MESSAGE))]  # should be bot.send_format_message
                     tb = sys.exc_info()[2]
-                    raise error.with_traceback(tb)
-            except Exception as e:
+                    raise_error = error.with_traceback(tb)
+            except Exception as error:
 
                 res = [bot.send_message(user.id, str(ERROR_MESSAGE))]  # should be bot.send_format_message
                 tb = sys.exc_info()[2]
-                raise e.with_traceback(tb)
+                raise_error = error.with_traceback(tb)
 
             # log actions
 
@@ -99,7 +100,8 @@ def handler_decor(log_type='F'):
                         log_value = update.message.text
                 elif log_type == 'U':
                     log_value = user.current_utrl
-                elif log_type == 'F':
+                # elif log_type == 'F':
+                else:
                     log_value = func.__name__
 
                 add_log_action(user.id, log_value[:32])
@@ -107,13 +109,17 @@ def handler_decor(log_type='F'):
             if ActionLog.objects.filter(user=user, type='ACTION_ACTIVE_TODAY', dttm__date=timezone.now().date()).count() == 0:
                 add_log_action(user.id, 'ACTION_ACTIVE_TODAY')
 
-            return
+            if raise_error:
+                raise raise_error
+
+            return res
         return wrapper
     return decor
 
 
 
 # todo: rewrite code
+# ButtonPagination WITHOUT WARRANTY
 class ButtonPagination:
     """
     buttons -- массив кнопок с значением, которые отображать, формат кнопок:
@@ -156,60 +162,6 @@ class ButtonPagination:
         if self.callback_prefix_context_values:
             context_callback = '-'.join(map(str, self.callback_prefix_context_values)) + '-'
         return self.callback_prefix + context_callback
-
-    '''
-    def update_values(self, **kwargs):
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-        return self
-
-
-    def validate(self, button_callback, set_callback_prefix_context_values=True):
-        """
-        проверка если страница, то правильный формат у нее
-        :return:
-        """
-
-        button_value = None
-        page_num = None
-
-        str_button_value = button_callback.replace(self.callback_prefix, '').split('-')
-        callback_prefix_context_values = str_button_value[:-1]
-
-        if self.PAGE_CALLBACK_SYMBOL in str_button_value[-1]:
-            page_num = str_button_value[-1].replace(self.PAGE_CALLBACK_SYMBOL, '')
-            if page_num.isalnum():
-                page_num = int(page_num)
-            else:
-                raise ValueError(f'page number {page_num}')
-        else:
-            button_value = str_button_value[-1]
-
-        if set_callback_prefix_context_values:
-            self.callback_prefix_context_values = callback_prefix_context_values
-        return callback_prefix_context_values, button_value, page_num
-
-
-    def get_value_or_show_page(self, button_callback):
-        """
-
-        :return:
-        """
-
-        is_other_page = False
-        res_val = None
-
-        callback_prefix_context_values, button_value, page_num = self.validate(button_callback)
-        self.callback_prefix_context_values = callback_prefix_context_values
-
-        if page_num:
-            is_other_page = True
-            res_val = self.construct_inline_curr_page(page_num)
-        else:
-            res_val = button_value
-        return is_other_page, res_val
-    '''
 
     def value_page(self, value):
         """

@@ -28,14 +28,9 @@ class CategoryViewSet(TelegaViewSet):
             ('обувь', 'обувь'),
             ('одежда', 'одежда'),
         ),
-        'some_int': (
-            (100, '100'),
-            (1000, '1000'),
-            (5000, '5000'),
-        )
     }
 
-    updating_fields = ['name', 'info', 'some_int']
+    updating_fields = ['name', 'info']
 
     def show_elem(self, model_or_pk, mess=''):
         if issubclass(type(model_or_pk), models.Model):

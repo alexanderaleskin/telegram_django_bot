@@ -1,10 +1,10 @@
 .idea*
 db.sqlite*
 *.pyc
-dist*
+build/*
 *.egg-info
 node_modules/*
 dist/*
-mydatabase
 package-lock.json
 bot.logs
+.env

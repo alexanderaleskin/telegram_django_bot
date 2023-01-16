@@ -44,7 +44,7 @@ class TeleDeepLinkAdmin(admin.ModelAdmin):
 
 
 class BotMenuElemAdminForm(DefaultOverrideAdminWidgetsForm):
-    json_fields = ['buttons_db', 'callbacks_db', ]
+    list_json_fields = ['buttons_db', 'callbacks_db', ]
 
 
 @admin.register(BotMenuElem)
