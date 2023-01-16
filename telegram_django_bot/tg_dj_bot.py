@@ -265,13 +265,8 @@ class TG_DJ_Bot(BotDJ):
         self,
         endpoint: str,
         data,
-        reply_to_message_id: int = None,
-        disable_notification=None,
-        reply_markup=None,
-        allow_sending_without_reply=None,
-        timeout=None,
-        api_kwargs=None,
-        protect_content=None,
+        *args,
+        **kwargs
     ):
 
         for field in ['text', 'caption']:
@@ -283,13 +278,8 @@ class TG_DJ_Bot(BotDJ):
         return super()._message(
             endpoint,
             data,
-            reply_to_message_id,
-            disable_notification,
-            reply_markup,
-            allow_sending_without_reply,
-            timeout,
-            api_kwargs,
-            protect_content
+            *args,
+            **kwargs
         )
 
     def task_send_message_handler(bot, user, func, func_args, func_kwargs):

@@ -1,3 +1,5 @@
+import logging
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core import validators
@@ -171,6 +173,18 @@ class TelegramUser(AbstractUser):
             return self.telegram_language_code
         return settings.LANGUAGE_CODE
 
+    def save(self, *args, **kwargs):
+        if self.id is None and self.is_staff:
+            id_num = 1
+            while self.__class__.objects.filter(id=id_num).count():
+                id_num += 1
+
+            self.id = id_num
+
+            logging.warning(f"Try to save user without ID. For staff the smallest unused ID will be used: {id_num}")
+
+        return super(TelegramUser, self).save(*args, **kwargs)
+            
 
 class TeleDeepLink(models.Model):
     title = models.CharField(max_length=64, default='', blank=True)
@@ -201,7 +215,7 @@ class BotMenuElem(models.Model):
     """
 
     command = models.TextField(  # for multichoice start
-        unique=True, null=True, blank=True,
+        null=True, blank=True,  # todo: add manual check
         help_text=_('Bot command that can call this menu block')
     )
 
@@ -226,7 +240,10 @@ class BotMenuElem(models.Model):
     message = models.TextField(help_text=_('Text message'))
     buttons_db = models.TextField(
         default='[]',
-        help_text=_('InlineKeyboardMarkup buttons list, ({"text": , "url" or "callback_data"})')
+        help_text=_(
+            'InlineKeyboardMarkup buttons structure (double list of dict), where each button(dict) has next format: '
+            '{"text": "text", "url": "google.com"} or {"text":"text", "callback_data": "data"})'
+        )
     )
     media = models.FileField(help_text=_('File attachment to the message'), null=True, blank=True)
     telegram_file_code = models.CharField(

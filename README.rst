@@ -1,24 +1,17 @@
 Telegram Django Bot Bridge
 ============================
 
-This library provides a Python interface for creating Telegram Bots. This library is created as a decision for
-development medшum or big bots (where there a lot of logic) on Python. It standardizes coding approach in the best
-practice of the web development.
-
-
-The library combines `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_.
+This library provides a Python interface for creating Telegram Bots. It standardizes coding approach in the best
+practice of the web development. The library combines `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_.
 and provides extra powerful utilities based on this libraries.
 
 
-By simple combining of  `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_
-you will get next opportunities:
-
-Python-Telegram-Bot:
+Normally, Python-Telegram-Bot gives next opportunities for bot creating:
 
 * Python Interface for communication with Telegram API;
 * Web-sevice for get updates from telegram;
 
-Django:
+and Django:
 
 * Django ORM  (communication with Database);
 * Administration panel for management.
@@ -36,7 +29,6 @@ Telegram Django Bot Bridge provides next special opportunities:
 * collecting stats from user actions in the bot;
 * creating user triggers;
 * commonly used utilities.
-
 
 
 
@@ -89,9 +81,9 @@ Quick start
 
 
 The key feature of the lib is ``TelegaViewSet`` - class for manage Django ORM model. It is designed in the
-similar way as `Django rest framework Viewset <https://www.django-rest-framework.org/api-guide/viewsets/>`_ is made.
+similar way as `Django rest framework Viewset <https://www.django-rest-framework.org/api-guide/viewsets/>`_.
 TelegaViewSet provides logic to manage ORM model from Telegram through bot interface. By default, TelegaViewSet has
-5 base methods:
+5 methods:
 
 * ``create`` - create a new instance of specified ORM model;
 * ``change`` - update instance fields of specified ORM model;
@@ -178,7 +170,7 @@ See this **example** for great understanding.
 Deep in details
 ------------------
 
-
+Coming soon
 
 
 TelegaViewSet features

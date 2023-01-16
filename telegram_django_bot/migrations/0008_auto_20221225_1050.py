@@ -27,4 +27,15 @@ class Migration(migrations.Migration):
             field=models.TextField(default='[]',
                                    help_text='List of regular expressions (so far only an explicit list) for callbacks that call this menu block'),
         ),
+        migrations.AlterField(
+            model_name='botmenuelem',
+            name='buttons_db',
+            field=models.TextField(default='[]',
+                                   help_text='InlineKeyboardMarkup buttons structure (double list of dict), where each button(dict) has next format: {"text": "text", "url": "google.com"} or {"text":"text", "callback_data": "data"})'),
+        ),
+        migrations.AlterField(
+            model_name='botmenuelem',
+            name='command',
+            field=models.TextField(blank=True, help_text='Bot command that can call this menu block', null=True),
+        ),
     ]
