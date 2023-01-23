@@ -11,25 +11,6 @@ from telegram import Update, Message, Chat, User as TelegramAPIUser, CallbackQue
 from .tg_dj_bot import TG_DJ_Bot
 
 
-# class TestBot(TG_DJ_Bot):
-#     def __init__(self, *args, dry_send=False, **kwargs):
-#         super().__init__(*args, **kwargs)
-#
-#         self.dry_send = dry_send
-#
-#     def _post(
-#         self,
-#         endpoint: str,
-#         data: JSONDict = None,
-#         timeout: ODVInput[float] = DEFAULT_NONE,
-#         api_kwargs: JSONDict = None,
-#     ):   #-> Union[bool, JSONDict, None]:   # return different formats
-#
-#         if self.dry_send:
-#             return data
-#         else:
-#             return super()._post(endpoint, data, timeout, api_kwargs)
-
 
 class DJ_TestCase(TestCase):
     pass

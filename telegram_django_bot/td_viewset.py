@@ -7,10 +7,8 @@ from django.forms.models import ModelMultipleChoiceField
 from django.db import models
 from django.forms.fields import ChoiceField, BooleanField
 from django.utils.translation import gettext as _, gettext_lazy
-from django.contrib.auth import get_user_model
 from django.conf import settings
 
-from .forms import UserForm
 from .utils import add_log_action
 from .telegram_lib_redefinition import InlineKeyboardButtonDJ as inlinebutt
 from .permissions import AllowAny
@@ -136,7 +134,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         self.foreign_filters = args[1:edge]
         return args[:1] + args[edge:]
 
-    def send_answer(self, chat_action, chat_action_args, utrl, user, *args, **kwargs):
+    def send_answer(self, chat_action, chat_action_args, utrl, *args, **kwargs):
         if chat_action == self.CHAT_ACTION_MESSAGE:
             message, buttons = chat_action_args
             res = self.bot.edit_or_send(
@@ -145,7 +143,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
                 buttons,
             )
         else:
-            raise ValueError(f'unknown chat_action {chat_action} {utrl}, {user}')
+            raise ValueError(f'unknown chat_action {chat_action} {utrl}, {self.user}')
         return res
 
     def has_permissions(self, bot, update, user, utrl_args, **kwargs):
@@ -180,7 +178,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             buttons = []
             chat_action_args = (message, buttons)
 
-        res = self.send_answer(chat_action, chat_action_args, utrl, user)
+        res = self.send_answer(chat_action, chat_action_args, utrl)
 
         utrl_path = utrl.split(self.ARGS_SEPARATOR_SYMBOL)[0]   # log without params as to much varients
         add_log_action(self.user.id, utrl_path)
@@ -198,9 +196,6 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         else:
             model = self.get_queryset().filter(pk=model_or_pk).first()
         return model
-
-    # def get_item(self, item):
-    #     """ show info about item"""
 
     def create_or_update_helper(self, field, value, func_response='create', instance=None, initial_data=None):
 
@@ -379,18 +374,23 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         else:
             return self.generate_message_no_elem(model_or_pk)
 
-    def show_list(self, page=0, per_page=10, columns=1):
-        """show list items"""
-
-        # import pdb;pdb.set_trace()
-        mess = ''
-        buttons = []
-        page = int(page)
-
+    def show_list_get_queryset(self, page=0, per_page=10, columns=1, *args, **kwargs):
         count_models = self.get_queryset().count()
         first_this_page = page * per_page * columns
         first_next_page = (page + 1) * per_page * columns
         models = list(self.get_queryset()[first_this_page: first_next_page])
+        return count_models, models, first_this_page, first_next_page
+
+    def show_list(self, page=0, per_page=10, columns=1, *args, **kwargs):
+        """show list items"""
+        page = int(page)
+
+        count_models, models, first_this_page, first_next_page = self.show_list_get_queryset(
+            page, per_page, columns, *args, **kwargs
+        )
+
+        mess = ''
+        buttons = []
 
         prev_page_button = inlinebutt(
             text=f'◀️️️',
@@ -413,7 +413,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             elif first_next_page >= count_models:
                 buttons = [[prev_page_button]]
             else:
-                print(f'unreal situation {count_models}, {len(models)}, {first_this_page}, {first_next_page}')
+                logging.error(f'unreal situation {count_models}, {len(models)}, {first_this_page}, {first_next_page}')
 
         if len(models):
             for it_m, model in enumerate(models, page * per_page * columns + 1):
@@ -568,7 +568,6 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         return buttons
 
     def generate_message_next_field(self, next_field, mess='', func_response='create', instance_id=None):
-        # import pdb;pdb.set_trace()
 
         is_choice_field = issubclass(type(self.telega_form.base_fields[next_field]), ChoiceField)
 
@@ -610,7 +609,6 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
                         else:
                             selected_variants = field_value
 
-            # print(choices)
             buttons += self.generate_message_next_field_choice_buttons(
                 next_field, func_response, choices, selected_variants, callback_path
             )
@@ -714,39 +712,5 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             'model_id': model_id,
         }
         return self.CHAT_ACTION_MESSAGE, (mess, [])
-
-
-class UserViewSet(TelegaViewSet):
-    actions = ['change', 'show_elem']
-
-    queryset = get_user_model().objects.all()
-    telega_form = UserForm
-    use_name_and_id_in_elem_showing = False
-
-    prechoice_fields_values = {
-        "timezone": list([(f'{tm}:0:0', f'+{tm} UTC' if tm > 0 else f'{tm} UTC') for tm in range(-11, 13)]),
-        "telegram_language_code": settings.LANGUAGES,
-    }
-
-    def get_queryset(self):
-        return super().get_queryset().filter(id=self.user.id)
-
-    def show_elem(self, model_id=None, mess=''):
-        _, (mess, buttons) = super().show_elem(self.user.id, mess)
-
-        return self.CHAT_ACTION_MESSAGE, (mess, buttons)
-
-    def generate_value_str(self, model, field, field_name, try_field='name'):
-        if field_name == 'timezone':
-            value = getattr(model, field_name, "")
-            value = int(value.total_seconds() // 3600)
-            return f'+{value} UTC' if value > 0 else f'{value} UTC'
-
-        else:
-            return super().generate_value_str(model, field, field_name, try_field)
-
-    def generate_message_next_field_choice_buttons(self, *args, **kwargs):
-        kwargs['self_variant'] = False
-        return super().generate_message_next_field_choice_buttons(*args, **kwargs)
 
 

@@ -216,7 +216,7 @@ class BotMenuElem(models.Model):
 
     command = models.TextField(  # for multichoice start
         null=True, blank=True,  # todo: add manual check
-        help_text=_('Bot command that can call this menu block')
+        help_text=_('Bot command that can call this menu block. Add 1 command per row')
     )
 
     empty_block = models.BooleanField(
@@ -230,7 +230,10 @@ class BotMenuElem(models.Model):
 
     callbacks_db = models.TextField(
         default='[]',
-        help_text=_('List of regular expressions (so far only an explicit list) for callbacks that call this menu block')
+        help_text=_(
+            'List of regular expressions (so far only an explicit list) for callbacks that call this menu block. '
+            'For example, list ["data", "callback2"] will catch the clicking InlineKeyboardButtons with callback_data "data" or "callback2"'
+        )
     )
 
     forward_message_id = models.IntegerField(null=True, blank=True)

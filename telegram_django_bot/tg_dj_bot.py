@@ -261,27 +261,6 @@ class TG_DJ_Bot(BotDJ):
 
         return response, media_files_codes
 
-    def _message(
-        self,
-        endpoint: str,
-        data,
-        *args,
-        **kwargs
-    ):
-
-        for field in ['text', 'caption']:
-            if field in data and hasattr(data[field], '__call__'):
-                data[field] = data[field].__call__()
-            elif data.get(field):
-                data[field] = str(data[field])
-
-        return super()._message(
-            endpoint,
-            data,
-            *args,
-            **kwargs
-        )
-
     def task_send_message_handler(bot, user, func, func_args, func_kwargs):
         is_sent = False
         res_mess = None
