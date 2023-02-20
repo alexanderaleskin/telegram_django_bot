@@ -17,7 +17,7 @@ class TelegaErrorDict(ErrorDict):
         return self.as_text()
 
 
-class BaseTelegaForm(BaseForm):
+class BaseTelegramForm(BaseForm):
     # field_order = None
     form_name = ''
 
@@ -115,7 +115,7 @@ class BaseTelegaForm(BaseForm):
         self._post_clean()
 
 
-class BaseTelegaModelForm(BaseTelegaForm, BaseModelForm):
+class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
     def __init__(self, user, data=None, files=None, initial=None, instance=None):
         self.user = user
         if instance is None:
@@ -167,14 +167,16 @@ class BaseTelegaModelForm(BaseTelegaForm, BaseModelForm):
             BaseModelForm.save(self, commit=commit)
             self.user.clear_status()
         else:
-            BaseTelegaForm.save(self, commit=commit)
+            BaseTelegramForm.save(self, commit=commit)
 
 
-class TelegaForm(BaseTelegaForm, metaclass=DeclarativeFieldsMetaclass):
+class TelegramForm(BaseTelegramForm, metaclass=DeclarativeFieldsMetaclass):
     """just for executing metaclass"""
 
 
-class TelegaModelForm(BaseTelegaModelForm, metaclass=ModelFormMetaclass):
+class TelegramModelForm(BaseTelegramModelForm, metaclass=ModelFormMetaclass):
     """just for executing metaclass"""
 
 
+TelegaForm = TelegramForm
+TelegaModelForm = TelegramModelForm

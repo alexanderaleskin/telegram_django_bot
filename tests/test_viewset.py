@@ -1,4 +1,5 @@
-from telegram_django_bot.td_viewset import TelegaViewSet, UserViewSet
+from telegram_django_bot.td_viewset import TelegramViewSet
+from telegram_django_bot.user_viewset import UserViewSet
 from telegram_django_bot.test import TD_TestCase
 from telegram_django_bot.routing import telega_reverse
 from django.conf import settings

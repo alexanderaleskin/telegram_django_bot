@@ -68,6 +68,8 @@ class MESSAGE_FORMAT:
         (GROUP_MEDIA, _('Media Group')),
     )
 
+    ALL_FORMATS = (elem[0] for elem in MESSAGE_FORMATS)
+
 
 class ModelwithTimeManager(models.Manager):
     def bot_filter_active(self, *args, **kwargs):
@@ -166,6 +168,11 @@ class TelegramUser(AbstractUser):
         self.current_utrl_form_db = '{}'
         if commit:
             self.save()
+
+        for attr in ['_current_utrl_context', '_current_utrl_form']:
+            if hasattr(self, attr):
+                delattr(self, attr)
+
 
     @property
     def language_code(self):

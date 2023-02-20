@@ -11,11 +11,6 @@ from telegram import Update, Message, Chat, User as TelegramAPIUser, CallbackQue
 from .tg_dj_bot import TG_DJ_Bot
 
 
-
-class DJ_TestCase(TestCase):
-    pass
-
-
 test_bot = TG_DJ_Bot(token=settings.TELEGRAM_TOKEN)
 if hasattr(settings, 'TELEGRAM_TEST_USER_IDS'):
     TELEGRAM_TEST_USER_IDS = settings.TELEGRAM_TEST_USER_IDS
@@ -34,6 +29,10 @@ else:
 
 class TestCallbackContext:
     bot = test_bot
+
+
+class DJ_TestCase(TestCase):
+    pass
 
 
 class TD_TestCase(DJ_TestCase):

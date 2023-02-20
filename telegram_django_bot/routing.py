@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 import telegram
 import inspect
 
-from telegram.ext import Handler, CallbackQueryHandler, Filters
+from telegram.ext import Handler
 
 
 def telega_resolve(path, utrl_conf=None):
@@ -96,7 +96,7 @@ class RouterCallbackMessageCommandHandler(Handler):
 
                 user = get_user_model().objects.filter(id=user_details.id).first()
                 if user:
-                    logging.info('user.current_utrl', user.current_utrl)
+                    logging.info(f'user.current_utrl {user.current_utrl}')
                     if user.current_utrl:
                         callback_func = telega_resolve(user.current_utrl, self.utrl_conf)
         return callback_func

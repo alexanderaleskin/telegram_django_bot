@@ -7,14 +7,13 @@ from django.forms.models import ModelMultipleChoiceField
 from django.db import models
 from django.forms.fields import ChoiceField, BooleanField
 from django.utils.translation import gettext as _, gettext_lazy
-from django.conf import settings
 
 from .utils import add_log_action
 from .telegram_lib_redefinition import InlineKeyboardButtonDJ as inlinebutt
-from .permissions import AllowAny
+from .permissions import PermissionAllowAny
 
 
-class TelegaViewSetMetaClass(type):
+class TelegramViewSetMetaClass(type):
     """
     Needed for inheritance information of command_routings_<func> and meta_texts_dict
 
@@ -47,8 +46,8 @@ class TelegaViewSetMetaClass(type):
         return new_class
 
 
-class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
-    permission_classes = [AllowAny]
+class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
+    permission_classes = [PermissionAllowAny]
     actions = ['create', 'change', 'delete', 'show_elem', 'show_list']
 
     command_routing_create = 'cr'
@@ -65,7 +64,9 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
 
     ARGS_SEPARATOR_SYMBOL = '&'
 
-    telega_form = None
+    model_form = None
+    telega_form = model_form  # for legacy
+
     queryset = None
     viewset_name = ''
     foreign_filter_amount = 0
@@ -94,7 +95,6 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         'leave_blank_button_text': gettext_lazy('Leave blank'),
     }
 
-
     def __init__(self, prefix, user=None, bot=None, update=None, foreign_filters=None):
         self.user = user
         self.bot = bot
@@ -122,35 +122,9 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
 
         self.prefix = prefix.replace('^', '').replace('$', '')
 
-    def construct_utrl(self, *args, add_filters=True, **kwargs):
-        f_args = list(args)
-        if add_filters:
-            f_args = f_args[:1] + self.foreign_filters + f_args[1:]
-        return self.ARGS_SEPARATOR_SYMBOL.join(map(lambda x: str(x), f_args))
-
-    def get_utrl_params(self, utrl):
-        edge = self.foreign_filter_amount + 1
-        args = utrl.split(self.ARGS_SEPARATOR_SYMBOL)
-        self.foreign_filters = args[1:edge]
-        return args[:1] + args[edge:]
-
-    def send_answer(self, chat_action, chat_action_args, utrl, *args, **kwargs):
-        if chat_action == self.CHAT_ACTION_MESSAGE:
-            message, buttons = chat_action_args
-            res = self.bot.edit_or_send(
-                self.update,
-                message,
-                buttons,
-            )
-        else:
-            raise ValueError(f'unknown chat_action {chat_action} {utrl}, {self.user}')
-        return res
-
-    def has_permissions(self, bot, update, user, utrl_args, **kwargs):
-        for permission in self.permission_classes:
-            if not permission().has_permissions(bot, update, user, utrl_args, **kwargs):
-                return False
-        return True
+    # Entrance and exit of the class:
+    # dispatch gets info about user action, checks permissions, selects and executes function
+    # (one of the 5 main or self written) basing on user action, and finally send answer to user
 
     def dispatch(self, bot, update, user):
         """ terminate function for response """
@@ -159,114 +133,49 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         self.update = update
         self.user = user
 
-        if update.callback_query:
-            utrl = update.callback_query.data
-        else:
-            utrl = user.current_utrl
+        utrl = update.callback_query.data if update.callback_query else user.current_utrl
+        utrl_args = self.get_utrl_params(re.sub(f'^{self.prefix}', '', utrl))
+        logging.debug(f'used utrl: {utrl}')
 
-        self.utrl = utrl
-
-        if settings.DEBUG:
-            logging.info(f'utrl: {utrl}')
-
-        utrl_args = self.get_utrl_params(re.sub(f'^{self.prefix}', '', self.utrl))
         if self.has_permissions(bot, update, user, utrl_args):
-            chat_action, chat_action_args = self.viewset_routing[utrl_args[0]](*utrl_args[1:])
+            chat_reply_action, chat_action_args = self.viewset_routing[utrl_args[0]](*utrl_args[1:])
         else:
-            chat_action = self.CHAT_ACTION_MESSAGE
+            chat_reply_action = self.CHAT_ACTION_MESSAGE
             message = _('Sorry, you do not have permissions to this action.')
             buttons = []
             chat_action_args = (message, buttons)
 
-        res = self.send_answer(chat_action, chat_action_args, utrl)
+        res = self.send_answer(chat_reply_action, chat_action_args, utrl)
 
-        utrl_path = utrl.split(self.ARGS_SEPARATOR_SYMBOL)[0]   # log without params as to much varients
+        utrl_path = utrl.split(self.ARGS_SEPARATOR_SYMBOL)[0]   # log without params as there are too much varients
         add_log_action(self.user.id, utrl_path)
         return res
 
-    def get_queryset(self):
-        if self.queryset._result_cache:
-            self.queryset._result_cache = None
-            self.queryset._prefetch_done = False
-        return self.queryset
+    def get_utrl_params(self, utrl):
+        edge = self.foreign_filter_amount + 1
+        args = utrl.split(self.ARGS_SEPARATOR_SYMBOL)
+        self.foreign_filters = args[1:edge]
+        return args[:1] + args[edge:]
 
-    def _get_elem(self, model_or_pk):
-        if issubclass(type(model_or_pk), models.Model):
-            model = model_or_pk
+    def has_permissions(self, bot, update, user, utrl_args, **kwargs):
+        for permission in self.permission_classes:
+            if not permission().has_permissions(bot, update, user, utrl_args, **kwargs):
+                return False
+        return True
+
+    def send_answer(self, chat_reply_action, chat_action_args, utrl, *args, **kwargs):
+        if chat_reply_action == self.CHAT_ACTION_MESSAGE:
+            message, buttons = chat_action_args
+            res = self.bot.edit_or_send(
+                self.update,
+                message,
+                buttons,
+            )
         else:
-            model = self.get_queryset().filter(pk=model_or_pk).first()
-        return model
-
-    def create_or_update_helper(self, field, value, func_response='create', instance=None, initial_data=None):
-
-        is_multichoice_field = self.telega_form.base_fields[field].__class__ == ModelMultipleChoiceField if field else False
-        show_field_variants_for_update = (func_response == 'change') and (value is None) and (self.update.message is None)
-        want_1more_variant_for_multichoice = True
-        want_write_self_variant = False
-        data = {} if initial_data is None else copy.deepcopy(initial_data)
-
-        if (type(field) == str) and field:
-            field_value = None
-            if value:
-                if value == self.WRITE_MESSAGE_VARIANT_SYMBOLS:
-                    want_write_self_variant = True
-                elif value == self.GO_NEXT_MULTICHOICE_SYMBOLS:
-                    want_1more_variant_for_multichoice = False
-                elif value == self.NONE_VARIANT_SYMBOLS:
-                    data[field] = None
-                else:
-                    field_value = value
-            elif self.update.message:
-                field_value = self.update.message.text
-
-            if not field_value is None:
-                data[field] = field_value.split(',') if is_multichoice_field else field_value
-
-        want_1more_variant_for_multichoice &= is_multichoice_field  # and len(data.get('field', []))
-
-        form_kwargs = {
-            'user': self.user,
-            'data': data,
-        }
-        instance_id = None
-        if instance:
-            form_kwargs['instance'] = instance
-            instance_id = instance.pk
-
-        self.form = self.telega_form(**form_kwargs)
-        form = self.form
-        if want_write_self_variant:
-            res = self.generate_message_self_variant(field, func_response=func_response, instance_id=instance_id)
-        else:
-            if form.is_valid():
-                if not show_field_variants_for_update:
-                    # todo: rewrite as is_completed will work only form ModelForm
-                    form.save(is_completed=not want_1more_variant_for_multichoice)
-
-                if want_1more_variant_for_multichoice or show_field_variants_for_update:
-                    res = self.generate_message_next_field(
-                        field,
-                        func_response=func_response,
-                        instance_id=instance_id
-                    )
-
-                elif form.next_field:
-                    res = self.generate_message_next_field(
-                        form.next_field,
-                        func_response=func_response,
-                        instance_id=instance_id
-                    )
-                else:
-                    if func_response == 'create':
-                        res = self.generate_message_success_created(self.form.instance)
-                    else:
-                        res = self.show_elem(self.form.instance, _('The field has been updated!\n\n'))
-            else:
-                res = self.generate_message_value_error(
-                    field or list(form.fields.keys())[-1],
-                    form.errors, func_response=func_response, instance_id=instance_id
-                )
+            raise ValueError(f'unknown chat_action {chat_reply_action} {utrl}, {self.user}')
         return res
+
+    # 5 main functions for data managing
 
     def create(self, field=None, value=None):
         """creating item, could be several steps"""
@@ -298,57 +207,17 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
     def delete(self, model_or_pk, is_confirmed=False):
         """delete item"""
 
-        # import pdb;pdb.set_trace()
         model = self._get_elem(model_or_pk)
 
         if model:
-            buttons = []
-
             if self.deleting_with_confirm and not is_confirmed:
                 # just ask for confirmation
-                mess = self.show_texts_dict['confirm_deleting'] % {
-                    'viewset_name': self.viewset_name,
-                    'model_id': f'#{model.id}' or '',
-                }
-                buttons = [
-                    [inlinebutt(
-                        text=self.show_texts_dict['confirm_delete_button_text'],
-                        callback_data=self.gm_callback_data(
-                            'delete',
-                            model.id,
-                            '1'  # True
-                        )
-                    )]
-                ]
-                if 'show_elem' in self.actions:
-                    buttons += [
-                        [inlinebutt(
-                            text=_('🔙 Back'),
-                            callback_data=self.gm_callback_data(
-                                'show_elem',
-                                model.id,
-                            )
-                        )]
-                    ]
-
+                mess, buttons = self.gm_delete_getting_confirmation(model)
             else:
                 # real deleting
                 model.delete()
+                mess, buttons = self.gm_delete_successfully(model)
 
-                mess = self.show_texts_dict['succesfully_deleted'] % {
-                    'viewset_name': self.viewset_name,
-                    'model_id': f'#{model.id}' or '',
-                }
-
-                if 'show_list' in self.actions:
-                    buttons += [
-                        [inlinebutt(
-                            text=_('🔙 Return to list'),
-                            callback_data=self.generate_message_callback_data(
-                                self.command_routings['command_routing_show_list'],
-                            )
-                        )]
-                    ]
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
             return self.generate_message_no_elem(model_or_pk)
@@ -361,71 +230,44 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         :return:
         """
 
-        model = self._get_elem(model_or_pk)
+        # generate content
+        model = self.get_orm_model(model_or_pk)
 
+        # generate view of content
         if model:
             if self.use_name_and_id_in_elem_showing:
                 mess += f'{self.viewset_name} #{model.pk} \n'
-            mess += self.generate_show_fields(model, full_show=True)
+            mess += self.gm_show_elem_or_list_fields(model, is_elem=True)
 
-            buttons = self.generate_elem_buttons(model)
+            buttons = self.gm_show_elem_create_buttons(model)
 
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
             return self.generate_message_no_elem(model_or_pk)
 
-    def show_list_get_queryset(self, page=0, per_page=10, columns=1, *args, **kwargs):
-        count_models = self.get_queryset().count()
-        first_this_page = page * per_page * columns
-        first_next_page = (page + 1) * per_page * columns
-        models = list(self.get_queryset()[first_this_page: first_next_page])
-        return count_models, models, first_this_page, first_next_page
-
     def show_list(self, page=0, per_page=10, columns=1, *args, **kwargs):
         """show list items"""
         page = int(page)
 
-        count_models, models, first_this_page, first_next_page = self.show_list_get_queryset(
+        # generate content
+        count_models, page_models, first_this_page, first_next_page = self.show_list_get_queryset(
             page, per_page, columns, *args, **kwargs
         )
 
-        mess = ''
-        buttons = []
-
-        prev_page_button = inlinebutt(
-            text=f'◀️️️',
-            callback_data=self.generate_message_callback_data(
-                self.command_routings['command_routing_show_list'], str(page - 1),
+        # generate view of content
+        if page_models_amount := len(page_models):
+            mess = ''
+            buttons = self.gm_show_list_create_pagination(
+                page, count_models, first_this_page, first_next_page, page_models_amount
             )
-        )
-        next_page_button = inlinebutt(
-            text=f'️▶️️',
-            callback_data=self.generate_message_callback_data(
-                self.command_routings['command_routing_show_list'], str(page + 1),
-            )
-        )
 
-        if len(models) < count_models:
-            if (first_this_page > 0) and (first_next_page < count_models):
-                buttons = [[prev_page_button, next_page_button]]
-            elif first_this_page == 0:
-                buttons = [[next_page_button]]
-            elif first_next_page >= count_models:
-                buttons = [[prev_page_button]]
-            else:
-                logging.error(f'unreal situation {count_models}, {len(models)}, {first_this_page}, {first_next_page}')
+            for it_m, model in enumerate(page_models, page * per_page * columns + 1):
+                mess += self.gm_show_list_elem_info(model, it_m)
 
-        if len(models):
-            for it_m, model in enumerate(models, page * per_page * columns + 1):
-                mess += f'{it_m}. {self.viewset_name} #{ model.pk}\n' if self.use_name_and_id_in_elem_showing else f'{it_m}. '
-                mess += self.generate_show_fields(model)
-                mess += '\n\n'
                 buttons += [
                     [inlinebutt(
                         text=self.gm_show_list_button_names(it_m, model),
-                        callback_data=self.generate_message_callback_data(
-                            self.command_routings['command_routing_show_elem'],  model.pk,
-                        )
+                        callback_data=self.gm_callback_data('show_elem', model.pk)
                     )]
                 ]
         else:
@@ -434,44 +276,107 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
 
         return self.CHAT_ACTION_MESSAGE, (mess, buttons)
 
-    def generate_value_str(self, model, field, field_name, try_field='name'):
-        value = getattr(model, field_name, "")
+    # help functions for main functions for doing its work.
 
-        if value:
-            if issubclass(type(value), models.Manager):
-                value = value.all()
+    def get_queryset(self):
+        if self.queryset._result_cache:
+            self.queryset._result_cache = None
+            self.queryset._prefetch_done = False
+        return self.queryset
 
-            if issubclass(value.__class__, models.Model):
-                value = f'{getattr(value, try_field, "# " + str(value.pk))}'
-            elif (type(value) in [list, models.QuerySet]) and all(map(lambda x: issubclass(x.__class__, models.Model), value)):
-                value = ', '.join([f'{getattr(x, try_field, "# " + str(x.pk))}' for x in value])
-        elif type(value) != bool:
-            value = ''
+    def create_or_update_helper(self, field, value, func_response='create', instance=None, initial_data=None):
+        # init data
+        is_multichoice_field = self.telega_form.base_fields[field].__class__ == ModelMultipleChoiceField if field else False
+        show_field_variants_for_update = (func_response == 'change') and (value is None) and (self.update.message is None)
+        want_1more_variant_for_multichoice = True
+        want_write_self_variant = False
+        data = {} if initial_data is None else copy.deepcopy(initial_data)
 
-        is_choice_field = issubclass(type(field), ChoiceField)
-        if is_choice_field or field_name in self.prechoice_fields_values:
-            choices = field.choices if is_choice_field else self.prechoice_fields_values[field_name]
-            choice = list(filter(lambda x: x[0] == value, choices))
-            if len(choice):
-                value = choice[0][1]
-        return value
+        # understanding what user has sent
+        if (type(field) == str) and field:
+            field_value = None
+            if value:
+                if value == self.WRITE_MESSAGE_VARIANT_SYMBOLS:
+                    want_write_self_variant = True
+                elif value == self.GO_NEXT_MULTICHOICE_SYMBOLS:
+                    want_1more_variant_for_multichoice = False
+                elif value == self.NONE_VARIANT_SYMBOLS:
+                    data[field] = None
+                else:
+                    field_value = value
+            elif self.update.message:
+                field_value = self.update.message.text
 
-    def generate_show_fields(self, model, full_show=False):
-        """
+            if not field_value is None:
+                data[field] = field_value.split(',') if is_multichoice_field else field_value
 
-        :param model:
-        :param full_show: True for show_elem and false for show_list
-        :return:
-        """
+        # some prepare work
+        want_1more_variant_for_multichoice &= is_multichoice_field  # and len(data.get('field', []))
 
-        mess = ''
-        for field_name, field in self.telega_form.base_fields.items():
-            if type(field.widget) != HiddenInput:
-                mess += f'<b>{field.label}</b>: {self.generate_value_str(model, field, field_name)}\n'
+        form_kwargs = {
+            'user': self.user,
+            'data': data,
+        }
+        instance_id = None
+        if instance:
+            form_kwargs['instance'] = instance
+            instance_id = instance.pk
 
-        return mess
+        self.form = self.telega_form(**form_kwargs)
+        form = self.form
 
-    def generate_elem_buttons(self, model, elem_per_raw=2):
+        # show message or change data in backend...
+        if want_write_self_variant:
+            res = self.generate_message_self_variant(field, func_response=func_response, instance_id=instance_id)
+        else:
+            if not form.is_valid():
+                res = self.generate_message_value_error(
+                    field or list(form.fields.keys())[-1],
+                    form.errors, func_response=func_response, instance_id=instance_id
+                )
+            else:
+                if not show_field_variants_for_update:
+                    # todo: rewrite as is_completed will work only form ModelForm
+                    form.save(is_completed=not want_1more_variant_for_multichoice)
+
+                if want_1more_variant_for_multichoice or show_field_variants_for_update:
+                    res = self.generate_message_next_field(
+                        field,
+                        func_response=func_response,
+                        instance_id=instance_id
+                    )
+
+                elif form.next_field:
+                    res = self.generate_message_next_field(
+                        form.next_field,
+                        func_response=func_response,
+                        instance_id=instance_id
+                    )
+                else:
+                    if func_response == 'create':
+                        res = self.generate_message_success_created(self.form.instance)
+                    else:
+                        res = self.show_elem(self.form.instance, _('The field has been updated!\n\n'))
+        return res
+
+    def show_list_get_queryset(self, page=0, per_page=10, columns=1, *args, **kwargs):
+        count_models = self.get_queryset().count()
+        first_this_page = page * per_page * columns
+        first_next_page = (page + 1) * per_page * columns
+        page_models = list(self.get_queryset()[first_this_page: first_next_page])
+        return count_models, page_models, first_this_page, first_next_page
+
+    def get_orm_model(self, model_or_pk):
+        if issubclass(type(model_or_pk), models.Model):
+            model = model_or_pk
+        else:
+            model = self.get_queryset().filter(pk=model_or_pk).first()
+        return model
+
+    # next functions are helpers for generate view of content (text and buttons for reply message)
+    # these functions just show / generate readable content for human and do not change anything
+
+    def gm_show_elem_create_buttons(self, model, elem_per_raw=2):
 
         buttons = []
         if 'change' in self.actions:
@@ -523,8 +428,95 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             )
         return buttons
 
+    def gm_show_elem_or_list_fields(self, model, is_elem=False, **kwargs):
+        """
+
+        :param model:
+        :param is_elem: True for show_elem and false for show_list
+        :return:
+        """
+
+        if 'full_show' in kwargs:
+            is_elem = kwargs['full_show']
+
+        mess = ''
+        for field_name, field in self.telega_form.base_fields.items():
+            if type(field.widget) != HiddenInput:
+                mess += f'<b>{field.label}</b>: {self.gm_value_str(model, field, field_name)}\n'
+
+        return mess
+
+    def gm_value_str(self, model, field, field_name, try_field='name'):
+        value = getattr(model, field_name, "")
+
+        if value:
+            if issubclass(type(value), models.Manager):
+                value = value.all()
+
+            if issubclass(value.__class__, models.Model):
+                value = f'{getattr(value, try_field, "# " + str(value.pk))}'
+            elif (type(value) in [list, models.QuerySet]) and all(map(lambda x: issubclass(x.__class__, models.Model), value)):
+                value = ', '.join([f'{getattr(x, try_field, "# " + str(x.pk))}' for x in value])
+        elif type(value) != bool:
+            value = ''
+
+        is_choice_field = issubclass(type(field), ChoiceField)
+        if is_choice_field or field_name in self.prechoice_fields_values:
+            choices = field.choices if is_choice_field else self.prechoice_fields_values[field_name]
+            choice = list(filter(lambda x: x[0] == value, choices))
+            if len(choice):
+                value = choice[0][1]
+        return value
+
+    def gm_show_list_elem_info(self, model, it_m:int) -> str:
+        mess = f'{it_m}. {self.viewset_name} #{model.pk}\n' if self.use_name_and_id_in_elem_showing else f'{it_m}. '
+        mess += self.generate_show_fields(model)
+        mess += '\n\n'
+        return mess
+
     def gm_show_list_button_names(self, it_m, model):
         return f'{it_m}. {self.viewset_name} #{ model.pk}'
+
+    def gm_show_list_create_pagination(
+            self,
+            page: int,
+            count_models: int,
+            first_this_page: int,
+            first_next_page: int,
+            page_model_amount: int
+    ) -> []:
+        prev_page_button = inlinebutt(
+            text=f'◀️️️',
+            callback_data=self.generate_message_callback_data(
+                self.command_routings['command_routing_show_list'], str(page - 1),
+            )
+        )
+        next_page_button = inlinebutt(
+            text=f'️▶️️',
+            callback_data=self.generate_message_callback_data(
+                self.command_routings['command_routing_show_list'], str(page + 1),
+            )
+        )
+
+        buttons = []
+        if page_model_amount < count_models:
+            if (first_this_page > 0) and (first_next_page < count_models):
+                buttons = [[prev_page_button, next_page_button]]
+            elif first_this_page == 0:
+                buttons = [[next_page_button]]
+            elif first_next_page >= count_models:
+                buttons = [[prev_page_button]]
+            else:
+                logging.error(
+                    f'unreal situation {count_models}, {page_model_amount}, {first_this_page}, {first_next_page}'
+                )
+        return buttons
+
+    def construct_utrl(self, *args, add_filters=True, **kwargs):
+        f_args = list(args)
+        if add_filters:
+            f_args = f_args[:1] + self.foreign_filters + f_args[1:]
+        return self.ARGS_SEPARATOR_SYMBOL.join(map(lambda x: str(x), f_args))
 
     def generate_message_callback_data(self, *args, add_filters=True, **kwargs):
         return self.prefix + self.construct_utrl(*args, add_filters=add_filters, **kwargs)
@@ -536,7 +528,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             **kwargs,
         )
 
-    def generate_message_next_field_choice_buttons(
+    def gm_next_field_choice_buttons(
             self,
             next_field,
             func_response,
@@ -567,7 +559,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             ])
         return buttons
 
-    def generate_message_next_field(self, next_field, mess='', func_response='create', instance_id=None):
+    def gm_next_field(self, next_field, mess='', func_response='create', instance_id=None):
 
         is_choice_field = issubclass(type(self.telega_form.base_fields[next_field]), ChoiceField)
 
@@ -639,7 +631,7 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
         else:
             return self.generate_message_self_variant(next_field, mess, func_response=func_response, instance_id=instance_id)
 
-    def generate_message_success_created(self, model_or_pk=None, mess=''):
+    def gm_success_created(self, model_or_pk=None, mess=''):
 
         mess += self.show_texts_dict['generate_message_success_created'] % {'viewset_name': self.viewset_name}
 
@@ -647,14 +639,14 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             return self.show_elem(model_or_pk, mess)
         return self.CHAT_ACTION_MESSAGE, (mess, [])
 
-    def generate_message_value_error(self, field_name, errors, mess='', func_response='create', instance_id=None):
+    def gm_value_error(self, field_name, errors, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
         mess += self.show_texts_dict['generate_message_value_error'] % {'label': field.label, 'errors': errors}
 
         # error could be only in self_variant?
         return self.generate_message_self_variant(field_name, mess, func_response=func_response, instance_id=instance_id)
 
-    def generate_message_self_variant(self, field_name, mess='', func_response='create', instance_id=None):
+    def gm_self_variant(self, field_name, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
 
         mess += self.show_texts_dict['generate_message_self_variant'] % {'label': field.label}
@@ -706,11 +698,71 @@ class TelegaViewSet(metaclass=TelegaViewSetMetaClass):
             )])
         return self.CHAT_ACTION_MESSAGE, (mess, buttons)
 
-    def generate_message_no_elem(self, model_id):
+    def gm_no_elem(self, model_id):
         mess = self.show_texts_dict['generate_message_no_elem'] % {
             'viewset_name': self.viewset_name,
             'model_id': model_id,
         }
         return self.CHAT_ACTION_MESSAGE, (mess, [])
+
+    def gm_delete_getting_confirmation(self, model):
+        mess = self.show_texts_dict['confirm_deleting'] % {
+            'viewset_name': self.viewset_name,
+            'model_id': f'#{model.id}' or '',
+        }
+        buttons = [
+            [inlinebutt(
+                text=self.show_texts_dict['confirm_delete_button_text'],
+                callback_data=self.gm_callback_data(
+                    'delete',
+                    model.id,
+                    '1'  # True
+                )
+            )]
+        ]
+        if 'show_elem' in self.actions:
+            buttons += [
+                [inlinebutt(
+                    text=_('🔙 Back'),
+                    callback_data=self.gm_callback_data(
+                        'show_elem',
+                        model.id,
+                    )
+                )]
+            ]
+        return mess, buttons
+
+    def gm_delete_successfully(self, model):
+        mess = self.show_texts_dict['succesfully_deleted'] % {
+            'viewset_name': self.viewset_name,
+            'model_id': f'#{model.id}' or '',
+        }
+
+        buttons = []
+        if 'show_list' in self.actions:
+            buttons += [
+                [inlinebutt(
+                    text=_('🔙 Return to list'),
+                    callback_data=self.generate_message_callback_data(
+                        self.command_routings['command_routing_show_list'],
+                    )
+                )]
+            ]
+        return mess, buttons
+
+    # for supporting legacy
+    _get_elem = get_orm_model
+    generate_message_no_elem = gm_no_elem
+    generate_message_self_variant = gm_self_variant
+    generate_message_value_error = gm_value_error
+    generate_message_success_created = gm_success_created
+    generate_message_next_field = gm_next_field
+    generate_message_next_field_choice_buttons = gm_next_field_choice_buttons
+    generate_elem_buttons = gm_show_elem_create_buttons
+    generate_show_fields = gm_show_elem_or_list_fields
+    generate_value_str = gm_value_str
+
+
+TelegaViewSet = TelegramViewSet  # for legacy
 
 

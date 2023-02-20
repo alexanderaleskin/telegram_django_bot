@@ -3,7 +3,7 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.utils import translation
 
-from .forms import TelegaModelForm, BaseModelForm, BaseTelegaForm
+from .forms import TelegaModelForm, BaseModelForm, BaseTelegramForm
 from .td_viewset import TelegaViewSet
 
 
@@ -32,7 +32,7 @@ class UserForm(TelegaModelForm):
             if settings.USE_I18N:
                 translation.activate(self.user.language_code)
         else:
-            BaseTelegaForm.save(self, commit=commit)
+            BaseTelegramForm.save(self, commit=commit)
 
 
 
