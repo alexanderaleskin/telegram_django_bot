@@ -55,7 +55,7 @@ class TestTelegaViewSet(TD_TestCase):
         self.assertEqual(button['text'], '🔙 Return to list')
         self.assertEqual(button['callback_data'], 'cat/sl')
 
-        self.assertEqual(mess, 'The Category  #1 is successfully deleted.')
+        self.assertEqual(mess, f'The Category  #{model.pk} is successfully deleted.')
 
     def test_gm_no_elem(self):
         model = self.create_category()
@@ -78,6 +78,88 @@ class TestTelegaViewSet(TD_TestCase):
         button_3 = button_3[0].to_dict()
         self.assertEqual(button_3['text'], '🔙 Return to list')
         self.assertEqual(button_3['callback_data'], 'cat/sl')
+
+    def test_gm_show_elem_or_list_fields(self):
+        model = self.create_category()
+        mess = self.cvs.gm_show_elem_or_list_fields(model)
+
+        self.assertEqual(mess, f'<b>Название категории</b>: {model.name}\n')
+
+    def test_gm_value_str(self):
+        model = self.create_category()
+        value = self.cvs.gm_value_str(model, model.info, 'info')
+
+        self.assertEqual(value, model.info)
+
+    def test_gm_show_list_elem_info(self):
+        model = self.create_category()
+        mess = self.cvs.gm_show_list_elem_info(model, 1)
+
+        self.assertEqual(mess, f'1. Category #{model.pk}\n<b>Название категории</b>: {model.name}\n\n\n')
+
+    def test_gm_show_list_button_names(self):
+        model = self.create_category()
+        mess = self.cvs.gm_show_list_button_names(1, model)
+
+        self.assertEqual(mess, f'1. Category #{model.pk}')
+
+    def test_gm_show_list_create_pagination(self):
+        button_1, button_2 = self.cvs.gm_show_list_create_pagination(0, 10, 1, 2, 5)[0]
+
+        button_1 = button_1.to_dict()
+        self.assertEqual(button_1['text'], '◀️️️')
+        self.assertEqual(button_1['callback_data'], 'cat/sl&-1')
+
+        button_2 = button_2.to_dict()
+        self.assertEqual(button_2['text'], '️▶️️')
+        self.assertEqual(button_2['callback_data'], 'cat/sl&1')
+
+    def test_gm_success_created(self):
+        model = self.create_category()
+        __, (mess, buttons) = self.cvs.gm_success_created(model.pk)
+        button_1, button_2, button_3 = buttons
+
+        self.assertEqual(mess, f'The Category is created! \n\nCategory #{model.pk} \n<b>Название категории</b>: {model.name}\n')
+
+        button_1 = button_1[0].to_dict()
+        self.assertEqual(button_1['text'], '🔄 Название категории')
+        self.assertEqual(button_1['callback_data'], f'cat/up&{model.pk}&name')
+
+        button_2 = button_2[0].to_dict()
+        self.assertEqual(button_2['text'], f'❌ Delete #{model.pk}')
+        self.assertEqual(button_2['callback_data'], f'cat/de&{model.pk}')
+
+        button_3 = button_3[0].to_dict()
+        self.assertEqual(button_3['text'], '🔙 Return to list')
+        self.assertEqual(button_3['callback_data'], 'cat/sl')
+
+    def test_gm_value_error(self):
+        __, (mess, buttons) = self.cvs.gm_value_error('info', 'Error')
+        button_1, button_2 = buttons
+
+        button_1 = button_1[0].to_dict()
+        self.assertEqual(button_1['text'], 'Leave blank')
+        self.assertEqual(button_1['callback_data'], 'cat/cr&info&!NoneNULL!')
+
+        button_2 = button_2[0].to_dict()
+        self.assertEqual(button_2['text'], 'Cancel adding')
+        self.assertEqual(button_2['callback_data'], 'cat/sl')
+
+        self.assertEqual(mess, 'While adding Информация the next errors were occurred: Error\n\nPlease, write the value for field Информация \n\nextra info about category\n\n')
+
+    def test_gm_self_variant(self):
+        __, (mess, buttons) = self.cvs.gm_self_variant('info')
+        button_1, button_2 = buttons
+
+        button_1 = button_1[0].to_dict()
+        self.assertEqual(button_1['text'], 'Leave blank')
+        self.assertEqual(button_1['callback_data'], 'cat/cr&info&!NoneNULL!')
+
+        button_2 = button_2[0].to_dict()
+        self.assertEqual(button_2['text'], 'Cancel adding')
+        self.assertEqual(button_2['callback_data'], 'cat/sl')
+
+        self.assertEqual(mess, 'Please, write the value for field Информация \n\nextra info about category\n\n')
 
 
 class TestUserViewSet(TD_TestCase):
