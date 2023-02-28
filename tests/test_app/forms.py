@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.translation import gettext, gettext_lazy
 from telegram_django_bot import forms as td_forms
-from .models import Category, Size, Entity, Order
+from .models import Category, Entity, Order
 
 
 class CategoryForm(td_forms.TelegaModelForm):
@@ -26,7 +26,7 @@ class EntityForm(td_forms.TelegaModelForm):
 
     class Meta:
         model = Entity
-        fields = ['name', 'category', 'sizes', 'is_visable', 'price']
+        fields = ['name', 'category', 'sizes', 'is_visable', 'price', 'author_id']
 
         labels = {
             "name": "Название",
@@ -52,4 +52,3 @@ class OrderForm(td_forms.TelegaModelForm):
         # widgets = {
         #     'entities': forms.Select
         # }
-

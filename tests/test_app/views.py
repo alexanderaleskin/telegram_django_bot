@@ -56,4 +56,3 @@ class OrderViewSet(TelegaViewSet):
     telega_form = OrderForm
     queryset = Order.objects.all()
     viewset_name = 'Заказ'
-
