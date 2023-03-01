@@ -4,8 +4,8 @@ from telegram_django_bot.test import TD_TestCase
 from telegram_django_bot.routing import telega_reverse, RouterCallbackMessageCommandHandler
 from django.conf import settings
 
-from test_app.models import Entity, Size, User, Category
-from test_app.views import CategoryViewSet, EntityViewSet
+from test_app.models import Entity, Order, Size, User, Category
+from test_app.views import CategoryViewSet, EntityViewSet, OrderViewSet
 
 
 class TestTelegaViewSet(TD_TestCase):
@@ -19,6 +19,11 @@ class TestTelegaViewSet(TD_TestCase):
         )
         self.evs = EntityViewSet(
             telega_reverse('EntityViewSet'),
+            user=self.user,
+            bot=self.test_callback_context.bot
+        )
+        self.ovs = OrderViewSet(
+            telega_reverse('OrderViewSet'),
             user=self.user,
             bot=self.test_callback_context.bot
         )
@@ -53,6 +58,66 @@ class TestTelegaViewSet(TD_TestCase):
         entity.save()
 
         return entity
+
+    def test_create_order_v1(self):
+        category = self.create_category()
+        size = self.create_size()
+        entity = self.create_entity(category, size)
+
+        self.ovs.create('info', 'test')
+        self.ovs.create('entities', f'{entity.pk}')
+        self.ovs.create('entities', '!GNMS!')
+
+        order_object = Order.objects.get(info='test', entities=entity.pk)
+        self.assertEqual(order_object.info, 'test')
+        self.assertEqual(order_object.entities.all()[0].pk, entity.pk)
+
+    def test_create_order_v2(self):
+        category = self.create_category()
+        size = self.create_size()
+        entity = self.create_entity(category, size)
+
+        start = self.create_update({'text': '/start'})
+        res_message = self.handle_update(start)
+
+        action_create_order = self.create_update(
+            res_message.to_dict(),
+            {'data': 'ord/cr&info&test'}
+        )
+        res_message = self.handle_update(action_create_order)
+
+        action_add_entity = self.create_update(
+            res_message.to_dict(),
+            {'data': f'ord/cr&entities&{entity.pk}'}
+        )
+        res_message = self.handle_update(action_add_entity)
+
+        action_confirm_add_entity = self.create_update(
+            res_message.to_dict(),
+            {'data': 'ord/cr&entities&!GNMS!'}
+        )
+        res_message = self.handle_update(action_confirm_add_entity)
+
+        order_object = Order.objects.get(info='test', entities=entity.pk)
+
+        mess = res_message.text.splitlines()
+        self.assertEqual(mess[0], 'The Заказ is created! ')
+        self.assertEqual(mess[2], f'Заказ #{order_object.pk} ')
+        self.assertEqual(mess[3], f'Название: {order_object.info}')
+        self.assertEqual(mess[4], f'Товары: {entity.name}')
+
+        buttons = res_message.reply_markup.to_dict()['inline_keyboard']
+        self.assertEqual(buttons[0][0]['text'], '🔄 Название')
+        self.assertEqual(buttons[0][0]['callback_data'], f'ord/up&{order_object.pk}&info')
+
+        self.assertEqual(buttons[0][1]['text'], '🔄 Товары')
+        self.assertEqual(buttons[0][1]['callback_data'], f'ord/up&{order_object.pk}&entities')
+
+        self.assertEqual(buttons[1][0]['text'], f'❌ Delete #{order_object.pk}')
+        self.assertEqual(buttons[1][0]['callback_data'], f'ord/de&{order_object.pk}')
+
+        self.assertEqual(buttons[2][0]['text'], '🔙 Return to list')
+        self.assertEqual(buttons[2][0]['callback_data'], 'ord/sl')
 
     def test_delete_entity_v1(self):
         category = self.create_category()
