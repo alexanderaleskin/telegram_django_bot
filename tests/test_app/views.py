@@ -24,9 +24,9 @@ class CategoryViewSet(TelegaViewSet):
 
     prechoice_fields_values = {
         'name': (
-            ('шапки', 'шапки'),
-            ('обувь', 'обувь'),
-            ('одежда', 'одежда'),
+            ('hats', 'Hats'),
+            ('shoes', 'Shoes'),
+            ('cloth', 'Cloth'),
         ),
     }
 
@@ -55,4 +55,13 @@ class EntityViewSet(TelegaViewSet):
 class OrderViewSet(TelegaViewSet):
     telega_form = OrderForm
     queryset = Order.objects.all()
-    viewset_name = 'Заказ'
+    viewset_name = 'Order'
+    foreign_filter_amount = 1  # [entity_id]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        if self.foreign_filters[0]:
+            return queryset.filter(entities=self.foreign_filters[0])
+        else:
+            return queryset

@@ -4,6 +4,8 @@ from telegram_django_bot.test import TD_TestCase
 from telegram_django_bot.routing import telega_reverse, RouterCallbackMessageCommandHandler
 from django.conf import settings
 
+from pprint import pprint
+
 from test_app.models import Entity, Order, Size, User, Category
 from test_app.views import CategoryViewSet, EntityViewSet, OrderViewSet
 
@@ -59,6 +61,37 @@ class TestTelegaViewSet(TD_TestCase):
 
         return entity
 
+    def create_order(self, entity: Entity):
+        order = Order.objects.create(
+            info='test',
+            status=Order.STATUS_COMPLETED
+        )
+        order.entities.add(entity)
+        order.save()
+
+        return order
+
+    def test_show_list_order_with_foreign_filters(self):
+        category = self.create_category()
+        size = self.create_size()
+        entity_1 = self.create_entity(category, size)
+        entity_2 = self.create_entity(category, size)
+        order_1 = self.create_order(entity_1)
+        order_2 = self.create_order(entity_2)
+        
+        start = self.create_update({'text': '/start'})
+        res_message = self.handle_update(start)
+
+        action_show_list = self.create_update(
+            res_message.to_dict(),
+            {'data': f'ord/sl&{entity_2.pk}'}
+        )
+        res_message = self.handle_update(action_show_list)
+
+        buttons = res_message.reply_markup.to_dict()['inline_keyboard']
+        self.assertEqual(buttons[0][0]['text'], f'1. Order #{entity_2.pk}')
+        self.assertEqual(buttons[0][0]['callback_data'], f'ord/se&{order_2.pk}&{entity_2.pk}')
+
     def test_create_order_v1(self):
         category = self.create_category()
         size = self.create_size()
@@ -68,7 +101,7 @@ class TestTelegaViewSet(TD_TestCase):
         self.ovs.create('entities', f'{entity.pk}')
         self.ovs.create('entities', '!GNMS!')
 
-        order_object = Order.objects.get(info='test', entities=entity.pk)
+        order_object = Order.objects.get(info='test', entities__pk=entity.pk)
         self.assertEqual(order_object.info, 'test')
         self.assertEqual(order_object.entities.all()[0].pk, entity.pk)
 
@@ -82,49 +115,49 @@ class TestTelegaViewSet(TD_TestCase):
 
         action_create_order = self.create_update(
             res_message.to_dict(),
-            {'data': 'ord/cr&info&test'}
+            {'data': 'ord/cr&&info&test'}
         )
         res_message = self.handle_update(action_create_order)
 
         action_add_entity = self.create_update(
             res_message.to_dict(),
-            {'data': f'ord/cr&entities&{entity.pk}'}
+            {'data': f'ord/cr&&entities&{entity.pk}'}
         )
         res_message = self.handle_update(action_add_entity)
 
         action_confirm_add_entity = self.create_update(
             res_message.to_dict(),
-            {'data': 'ord/cr&entities&!GNMS!'}
+            {'data': 'ord/cr&&entities&!GNMS!'}
         )
         res_message = self.handle_update(action_confirm_add_entity)
 
         order_object = Order.objects.get(info='test', entities=entity.pk)
 
         mess = res_message.text.splitlines()
-        self.assertEqual(mess[0], 'The Заказ is created! ')
-        self.assertEqual(mess[2], f'Заказ #{order_object.pk} ')
-        self.assertEqual(mess[3], f'Название: {order_object.info}')
-        self.assertEqual(mess[4], f'Товары: {entity.name}')
+        self.assertEqual(mess[0], 'The Order is created! ')
+        self.assertEqual(mess[2], f'Order #{order_object.pk} ')
+        self.assertEqual(mess[3], f'Title: {order_object.info}')
+        self.assertEqual(mess[4], f'Entities: {entity.name}')
 
         buttons = res_message.reply_markup.to_dict()['inline_keyboard']
-        self.assertEqual(buttons[0][0]['text'], '🔄 Название')
-        self.assertEqual(buttons[0][0]['callback_data'], f'ord/up&{order_object.pk}&info')
+        self.assertEqual(buttons[0][0]['text'], '🔄 Title')
+        self.assertEqual(buttons[0][0]['callback_data'], f'ord/up&&{order_object.pk}&info')
 
-        self.assertEqual(buttons[0][1]['text'], '🔄 Товары')
-        self.assertEqual(buttons[0][1]['callback_data'], f'ord/up&{order_object.pk}&entities')
+        self.assertEqual(buttons[0][1]['text'], '🔄 Entities')
+        self.assertEqual(buttons[0][1]['callback_data'], f'ord/up&&{order_object.pk}&entities')
 
         self.assertEqual(buttons[1][0]['text'], f'❌ Delete #{order_object.pk}')
-        self.assertEqual(buttons[1][0]['callback_data'], f'ord/de&{order_object.pk}')
+        self.assertEqual(buttons[1][0]['callback_data'], f'ord/de&&{order_object.pk}')
 
         self.assertEqual(buttons[2][0]['text'], '🔙 Return to list')
-        self.assertEqual(buttons[2][0]['callback_data'], 'ord/sl')
+        self.assertEqual(buttons[2][0]['callback_data'], 'ord/sl&')
 
     def test_delete_entity_v1(self):
         category = self.create_category()
         size = self.create_size()
         entity = self.create_entity(category, size)
 
-        __, (mess, buttons) = self.evs.delete(entity.pk)
+        _, (mess, buttons) = self.evs.delete(entity.pk)
         self.assertEqual(mess, f'Are you sure you want to delete Entity  #{entity.pk}?')
 
         button_1 = buttons[0][0].to_dict()
@@ -171,13 +204,13 @@ class TestTelegaViewSet(TD_TestCase):
         entity = self.create_entity(category, size)
         new_name = 'test_1'
 
-        __, (mess, buttons) = self.evs.change(entity.pk, 'name', new_name)
+        _, (mess, buttons) = self.evs.change(entity.pk, 'name', new_name)
         self.assertEqual(len(buttons), 5)
 
         mess = mess.splitlines()
         self.assertEqual(mess[0], 'The field has been updated!')
         self.assertEqual(mess[2], f'Entity #{entity.pk} ')
-        self.assertEqual(mess[3], f'<b>Название</b>: {new_name}')
+        self.assertEqual(mess[3], f'<b>Title</b>: {new_name}')
         self.assertEqual(mess[4], f'<b>Category</b>: {entity.category.name}')
         self.assertEqual(mess[5], f'<b>Sizes</b>: {entity.sizes.all()[0].name}')
         self.assertEqual(mess[6], f'<b>Is visable</b>: {entity.is_visable}')
@@ -200,7 +233,7 @@ class TestTelegaViewSet(TD_TestCase):
         res_message = self.handle_update(action_change_name_entity)
 
         message = res_message.text
-        self.assertEqual(message, 'Please, write the value for field Название \n\nmax length 128')
+        self.assertEqual(message, 'Please, write the value for field Title \n\nmax length 128')
 
         buttons = res_message.reply_markup.to_dict()['inline_keyboard']
         self.assertEqual(buttons[0][0]['text'], '⬅️ Go back')
@@ -212,7 +245,7 @@ class TestTelegaViewSet(TD_TestCase):
         mess = res_message.text.splitlines()
         self.assertEqual(mess[0], 'The field has been updated!')
         self.assertEqual(mess[2], f'Entity #{entity.pk} ')
-        self.assertEqual(mess[3], f'Название: {new_name}')
+        self.assertEqual(mess[3], f'Title: {new_name}')
         self.assertEqual(mess[4], f'Category: {entity.category.name}')
         self.assertEqual(mess[5], f'Sizes: {entity.sizes.all()[0].name}')
         self.assertEqual(mess[6], f'Is visable: {entity.is_visable}')
@@ -224,7 +257,7 @@ class TestTelegaViewSet(TD_TestCase):
         size = self.create_size()
         entity = self.create_entity(category, size)
 
-        __, (mess, buttons) = self.evs.show_list()
+        _, (mess, buttons) = self.evs.show_list()
         self.assertEqual(len(buttons), 1)
 
         button_1 = buttons[0][0].to_dict()
@@ -233,7 +266,7 @@ class TestTelegaViewSet(TD_TestCase):
 
         mess = mess.splitlines()
         self.assertEqual(mess[0], f'1. Entity #{entity.pk}')
-        self.assertEqual(mess[1], f'<b>Название</b>: {entity.name}')
+        self.assertEqual(mess[1], f'<b>Title</b>: {entity.name}')
         self.assertEqual(mess[2], f'<b>Category</b>: {entity.category.name}')
         self.assertEqual(mess[3], f'<b>Sizes</b>: {entity.sizes.all()[0].name}')
         self.assertEqual(mess[4], f'<b>Is visable</b>: {entity.is_visable}')
@@ -263,12 +296,12 @@ class TestTelegaViewSet(TD_TestCase):
         size = self.create_size()
         entity = self.create_entity(category, size)
 
-        __, (mess, buttons) = self.evs.show_elem(entity.pk)
+        _, (mess, buttons) = self.evs.show_elem(entity.pk)
         self.assertEqual(len(buttons), 5)
 
         mess = mess.splitlines()
         self.assertEqual(mess[0], f'Entity #{entity.pk} ')
-        self.assertEqual(mess[1], f'<b>Название</b>: {entity.name}')
+        self.assertEqual(mess[1], f'<b>Title</b>: {entity.name}')
         self.assertEqual(mess[2], f'<b>Category</b>: {entity.category.name}')
         self.assertEqual(mess[3], f'<b>Sizes</b>: {entity.sizes.all()[0].name}')
         self.assertEqual(mess[4], f'<b>Is visable</b>: {entity.is_visable}')
@@ -276,7 +309,7 @@ class TestTelegaViewSet(TD_TestCase):
         self.assertEqual(mess[6], f'<b>Author id</b>: {self.user.id}')
 
         button_1 = buttons[0][0].to_dict()
-        self.assertEqual(button_1['text'], '🔄 Название')
+        self.assertEqual(button_1['text'], '🔄 Title')
         self.assertEqual(button_1['callback_data'], f'ent/up&{entity.pk}&name')
 
         button_2 = buttons[0][1].to_dict()
@@ -322,7 +355,7 @@ class TestTelegaViewSet(TD_TestCase):
         res_message = self.handle_update(action_show_elem_entity)
 
         buttons = res_message.reply_markup.to_dict()['inline_keyboard']
-        self.assertEqual(buttons[0][0]['text'], '🔄 Название')
+        self.assertEqual(buttons[0][0]['text'], '🔄 Title')
         self.assertEqual(buttons[0][0]['callback_data'], f'ent/up&{entity_object.pk}&name')
 
         self.assertEqual(buttons[0][1]['text'], '🔄 Category')
@@ -420,7 +453,7 @@ class TestTelegaViewSet(TD_TestCase):
         buttons = res_message.reply_markup.to_dict()['inline_keyboard']
         self.assertEqual(len(buttons), 5)
 
-        self.assertEqual(buttons[0][0]['text'], '🔄 Название')
+        self.assertEqual(buttons[0][0]['text'], '🔄 Title')
         self.assertEqual(buttons[0][0]['callback_data'], f'ent/up&{entity_object.pk}&name')
 
         self.assertEqual(buttons[0][1]['text'], '🔄 Category')
@@ -469,7 +502,7 @@ class TestTelegaViewSet(TD_TestCase):
         self.assertEqual(len(buttons), 3)
 
         button_1, button_2, button_3 = buttons
-        self.assertEqual(button_1[0]['text'], '🔄 Название категории')
+        self.assertEqual(button_1[0]['text'], '🔄 Category name')
         self.assertEqual(button_1[0]['callback_data'], f'cat/up&{category_object.pk}&name')
 
         self.assertEqual(button_2[0]['text'], f'❌ Delete #{category_object.pk}')
@@ -511,7 +544,7 @@ class TestTelegaViewSet(TD_TestCase):
 
     def test_gm_no_elem(self):
         model = self.create_category()
-        __, (mess, buttons) = self.cvs.gm_no_elem(model.pk)
+        _, (mess, buttons) = self.cvs.gm_no_elem(model.pk)
 
         self.assertEqual(mess, f'The Category {model.pk} has not been found 😱 \nPlease try again from the beginning.')
 
@@ -520,7 +553,7 @@ class TestTelegaViewSet(TD_TestCase):
         button_1, button_2, button_3 = self.cvs.gm_show_elem_create_buttons(model)
 
         button_1 = button_1[0].to_dict()
-        self.assertEqual(button_1['text'], '🔄 Название категории')
+        self.assertEqual(button_1['text'], '🔄 Category name')
         self.assertEqual(button_1['callback_data'], f'cat/up&{model.pk}&name')
 
         button_2 = button_2[0].to_dict()
@@ -535,7 +568,7 @@ class TestTelegaViewSet(TD_TestCase):
         model = self.create_category()
         mess = self.cvs.gm_show_elem_or_list_fields(model)
 
-        self.assertEqual(mess, f'<b>Название категории</b>: {model.name}\n')
+        self.assertEqual(mess, f'<b>Category name</b>: {model.name}\n')
 
     def test_gm_value_str(self):
         model = self.create_category()
@@ -547,7 +580,7 @@ class TestTelegaViewSet(TD_TestCase):
         model = self.create_category()
         mess = self.cvs.gm_show_list_elem_info(model, 1)
 
-        self.assertEqual(mess, f'1. Category #{model.pk}\n<b>Название категории</b>: {model.name}\n\n\n')
+        self.assertEqual(mess, f'1. Category #{model.pk}\n<b>Category name</b>: {model.name}\n\n\n')
 
     def test_gm_show_list_button_names(self):
         model = self.create_category()
@@ -563,18 +596,19 @@ class TestTelegaViewSet(TD_TestCase):
         self.assertEqual(button_1['callback_data'], 'cat/sl&-1')
 
         button_2 = button_2.to_dict()
+
         self.assertEqual(button_2['text'], '️▶️️')
         self.assertEqual(button_2['callback_data'], 'cat/sl&1')
 
     def test_gm_success_created(self):
         model = self.create_category()
-        __, (mess, buttons) = self.cvs.gm_success_created(model.pk)
+        _, (mess, buttons) = self.cvs.gm_success_created(model.pk)
         button_1, button_2, button_3 = buttons
 
-        self.assertEqual(mess, f'The Category is created! \n\nCategory #{model.pk} \n<b>Название категории</b>: {model.name}\n')
-
+        self.assertEqual(mess, f'The Category is created! \n\nCategory #{model.pk} \n<b>Category name</b>: {model.name}\n')
+        
         button_1 = button_1[0].to_dict()
-        self.assertEqual(button_1['text'], '🔄 Название категории')
+        self.assertEqual(button_1['text'], '🔄 Category name')
         self.assertEqual(button_1['callback_data'], f'cat/up&{model.pk}&name')
 
         button_2 = button_2[0].to_dict()
@@ -586,7 +620,7 @@ class TestTelegaViewSet(TD_TestCase):
         self.assertEqual(button_3['callback_data'], 'cat/sl')
 
     def test_gm_value_error(self):
-        __, (mess, buttons) = self.cvs.gm_value_error('info', 'Error')
+        _, (mess, buttons) = self.cvs.gm_value_error('info', 'Error')
         button_1, button_2 = buttons
 
         button_1 = button_1[0].to_dict()
@@ -597,10 +631,10 @@ class TestTelegaViewSet(TD_TestCase):
         self.assertEqual(button_2['text'], 'Cancel adding')
         self.assertEqual(button_2['callback_data'], 'cat/sl')
 
-        self.assertEqual(mess, 'While adding Информация the next errors were occurred: Error\n\nPlease, write the value for field Информация \n\nextra info about category\n\n')
+        self.assertEqual(mess, 'While adding Info the next errors were occurred: Error\n\nPlease, write the value for field Info \n\nextra info about category\n\n')
 
     def test_gm_self_variant(self):
-        __, (mess, buttons) = self.cvs.gm_self_variant('info')
+        _, (mess, buttons) = self.cvs.gm_self_variant('info')
         button_1, button_2 = buttons
 
         button_1 = button_1[0].to_dict()
@@ -611,7 +645,7 @@ class TestTelegaViewSet(TD_TestCase):
         self.assertEqual(button_2['text'], 'Cancel adding')
         self.assertEqual(button_2['callback_data'], 'cat/sl')
 
-        self.assertEqual(mess, 'Please, write the value for field Информация \n\nextra info about category\n\n')
+        self.assertEqual(mess, 'Please, write the value for field Info \n\nextra info about category\n\n')
 
 
 class TestUserViewSet(TD_TestCase):

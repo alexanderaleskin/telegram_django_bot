@@ -12,8 +12,8 @@ class CategoryForm(td_forms.TelegaModelForm):
         fields = ['name', 'info',]
 
         labels = {
-            "name": "Название категории",
-            "info": "Информация"
+            "name": "Category name",
+            "info": "Info"
         }
 
         widgets = {
@@ -22,31 +22,30 @@ class CategoryForm(td_forms.TelegaModelForm):
 
 
 class EntityForm(td_forms.TelegaModelForm):
-    form_name = 'Изделие'
+    form_name = 'Entity'
 
     class Meta:
         model = Entity
         fields = ['name', 'category', 'sizes', 'is_visable', 'price', 'author_id']
 
         labels = {
-            "name": "Название",
-            "info": "Информация"
+            "name": "Title",
+            "info": "Info"
         }
 
 
-
 class OrderForm(td_forms.TelegaModelForm):
-    form_name = 'Заказ'
+    form_name = 'Order'
 
-    entities = forms.ModelMultipleChoiceField(queryset=Entity.objects.all().order_by('-id'), required=False, label='Товары')
+    entities = forms.ModelMultipleChoiceField(queryset=Entity.objects.all().order_by('-id'), required=False, label='Entities')
 
     class Meta:
         model = Order
         fields = ['info', 'entities']
 
         labels = {
-            "info": "Название",
-            "entities": "Товары"
+            "info": "Title",
+            "entities": "Entities"
         }
 
         # widgets = {
