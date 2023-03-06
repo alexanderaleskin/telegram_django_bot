@@ -71,6 +71,34 @@ class TestTelegaViewSet(TD_TestCase):
 
         return order
 
+    def test_category_permission(self):
+        category = self.create_category()
+        category.name = 'hats'
+        category.save()
+
+        start = self.create_update({'text': '/start'})
+        res_message = self.handle_update(start)
+
+        action_delete_category = self.create_update(
+            res_message.to_dict(),
+            {'data': f'cat/de&{category.pk}'}
+        )
+        res_message = self.handle_update(action_delete_category)
+        message_delete_permission = res_message.text
+
+        start = self.create_update({'text': '/start'})
+        res_message = self.handle_update(start)
+        
+        action_update_name = self.create_update(
+            res_message.to_dict(),
+            {'data': f'cat/up&{category.pk}&name'}
+        )
+        res_message = self.handle_update(action_update_name)
+        message_update_permission = res_message.text
+        
+        self.assertEqual(message_delete_permission, 'Sorry, you do not have permissions to this action.')
+        self.assertEqual(message_update_permission, 'Sorry, you do not have permissions to this action.')
+
     def test_show_list_order_with_foreign_filters(self):
         category = self.create_category()
         size = self.create_size()
@@ -649,4 +677,55 @@ class TestTelegaViewSet(TD_TestCase):
 
 
 class TestUserViewSet(TD_TestCase):
-    pass
+    def setUp(self) -> None:
+        user_id = settings.TELEGRAM_TEST_USER_IDS[0]
+        self.user = User.objects.create(id=user_id, username=user_id)
+        
+        self.rc_mch = RouterCallbackMessageCommandHandler()
+        self.handle_update = lambda update: self.rc_mch.handle_update(
+            update, 'some_str', 'some_str', self.test_callback_context
+        )
+
+    def test_show_elem(self):
+        start = self.create_update({'text': '/start'})
+        res_message = self.handle_update(start)
+
+        action_show_settings = self.create_update(
+            res_message.to_dict(),
+            {'data': 'us/se'}
+        )
+        res_message = self.handle_update(action_show_settings)
+
+        buttons = res_message.reply_markup.to_dict()['inline_keyboard']
+        self.assertEqual(buttons[0][0]['text'], '🔄 Timezone')
+        self.assertEqual(buttons[0][0]['callback_data'], f'us/up&{self.user.id}&timezone')
+        self.assertEqual(buttons[0][1]['text'], '🔄 Language')
+        self.assertEqual(buttons[0][1]['callback_data'], f'us/up&{self.user.id}&telegram_language_code')
+        self.assertEqual(res_message.text, 'Timezone: 3:00:00\nLanguage: English')
+
+    def test_change_language(self):
+        start = self.create_update({'text': '/start'})
+        res_message = self.handle_update(start)
+
+        action_change_timezone = self.create_update(
+            res_message.to_dict(),
+            {'data': f'us/up&{self.user.id}&telegram_language_code'}
+        )
+        res_message = self.handle_update(action_change_timezone)
+        
+        message = res_message.text
+        buttons = res_message.reply_markup.to_dict()['inline_keyboard']
+
+        self.assertEqual(message, 'Please, fill the field Language')
+
+        self.assertEqual(buttons[0][0]['text'], '✅ English')
+        self.assertEqual(buttons[0][0]['callback_data'], f'us/up&{self.user.id}&telegram_language_code&en')
+
+        self.assertEqual(buttons[1][0]['text'], 'German')
+        self.assertEqual(buttons[1][0]['callback_data'], f'us/up&{self.user.id}&telegram_language_code&de')
+
+        self.assertEqual(buttons[2][0]['text'], 'Russian')
+        self.assertEqual(buttons[2][0]['callback_data'], f'us/up&{self.user.id}&telegram_language_code&ru')
+
+        self.assertEqual(buttons[3][0]['text'], '⬅️ Go back')
+        self.assertEqual(buttons[3][0]['callback_data'], f'us/se&{self.user.id}')

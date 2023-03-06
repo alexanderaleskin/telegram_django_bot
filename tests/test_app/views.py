@@ -4,9 +4,11 @@ from .forms import CategoryForm, EntityForm, OrderForm
 from telegram_django_bot.telegram_lib_redefinition import InlineKeyboardButtonDJ
 from django.utils.translation import gettext_lazy as _
 from django.db import models
+from .permissions import CategoryPermission
 
 
 class CategoryViewSet(TelegaViewSet):
+    permission_classes = [CategoryPermission]
     command_routing_show_options = 'aaa'
     telega_form = CategoryForm
     queryset = Category.objects.all()
