@@ -3,13 +3,13 @@ Telegram Django Bot Bridge
 
 This library provides a Python interface for creating Telegram Bots. It standardizes coding approach in the best
 practice of the web development. The library combines `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_.
-and provides extra powerful utilities based on this libraries.
+and provides extra powerful utilities based on these libraries.
 
 
 Normally, Python-Telegram-Bot gives next opportunities for bot creating:
 
 * Python Interface for communication with Telegram API;
-* Web-sevice for get updates from telegram;
+* Web-service to get updates from telegram;
 
 and Django:
 
@@ -21,11 +21,15 @@ Telegram Django Bot Bridge provides next special opportunities:
 
 * using Django Forms;
 * using Viewsets (typical action with model (create, update, list, delete));
-* using Django localization;
+* using Django localization.
+* using function routing like urls routing in Django.
+
+And some extra useful staff:
+
 * using function routing like urls routing in Django;
 * creating tests;
 * creating general menu items with no-coding (through Django Admin Panel);
-* extra high-level Bot functions, such as wrapper for send delayed (or scheduled) messages;
+* extra high-level Bot functions, such as wrapper for sending delayed (or scheduled) messages;
 * collecting stats from user actions in the bot;
 * creating user triggers;
 * commonly used utilities.
@@ -58,15 +62,18 @@ Then you can configurate it in your app:
 in settings).
 
 
-3. Set:
+3. Set up constants in Django settings file:
 
-* ``TELEGRAM_ROOT_UTRLCONF`` -  for use django notation in callback (strongly recommended)
-* ``TELEGRAM_TOKEN`` - for adding triggers,
+* ``TELEGRAM_ROOT_UTRLCONF`` -  (same as ``ROOT_URLCONF`` for WEB) for using django notation in callback (routing) (strongly recommended)
+
+Not necessary, but useful settings:
+
+* ``TELEGRAM_TOKEN`` - for adding "triggers",
 * ``TELEGRAM_TEST_USER_IDS`` - for adding tests for your bot,
 * Make sure, that ``LANGUAGE_CODE``, ``LANGUAGE_CODE``, ``USE_I18N`` are also used in the library for language localization.
 
 
-4. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF ::
+4. This step connects ``Telegram Django Bot Bridge`` with ``Python-Telegram-Bot``. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF ::
 
     updater = Updater(bot=TG_DJ_Bot(settings.TELEGRAM_TOKEN))
     updater.dispatcher.add_handler(RouterCallbackMessageCommandHandler())
@@ -81,9 +88,11 @@ Quick start
 
 
 The key feature of the lib is ``TelegaViewSet`` - class for manage Django ORM model. It is designed in the
-similar way as `Django rest framework Viewset <https://www.django-rest-framework.org/api-guide/viewsets/>`_.
-TelegaViewSet provides logic to manage ORM model from Telegram through bot interface. By default, TelegaViewSet has
-5 methods:
+similar way as `Django rest framework Viewset <https://www.django-rest-framework.org/api-guide/viewsets/>`_ , but has
+a significant difference: while DRF Viewset provides response in serializable format (usually in json format) to frontend app, TelegaViewSet
+provides response to user in telegram interface in message format with buttons. So, you will manage data and receive
+response in human format by executing TelegaViewSet method. The methods use some kind of templates for generating human
+response (it is possible to overwrite these templates). By default, TelegaViewSet has 5 methods:
 
 * ``create`` - create a new instance of specified ORM model;
 * ``change`` - update instance fields of specified ORM model;
@@ -129,11 +138,11 @@ If you need, you can add extra actions to RequestViewSet for managing (see detai
 There are several parameters and secondary functions in TelegaViewSet for customizing logic if it is necessary.
 
 In this example, ``TelegaModelForm`` was used. TelegaModelForm is a descendant of Django ModelForm. So, you could use
-labels, clean and other parameters and functions for manage logic and displaying.
+labels, clean and other parameters and functions for managing logic and displaying.
 
 
 TelegaViewSet is designed to answer next user actions: clicking buttons and sometimes sending messages. The library imposes
-`Django URL notation <https://docs.djangoproject.com/en/4.1/topics/http/urls/>`_ for mapping user actions and TelegaViewSet (or usual handlers).
+`Django URL notation <https://docs.djangoproject.com/en/4.1/topics/http/urls/>`_ for mapping user actions to TelegaViewSet methods (or usual handlers).
 Usually, for correct mapping you just need to set ``TELEGRAM_ROOT_UTRLCONF`` and use ``RouterCallbackMessageCommandHandler`` in
 dispatcher as it is mentioned above in the *Install paragraph*.
 
@@ -154,99 +163,101 @@ From this point, you can use buttons with callback data "rv/<function_code>" for
 * "rv/sl" - RequestViewSet.show_list;
 
 
-See this **example** for great understanding.
+See these examples for great understanding:
 
 
+1. `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_
+2. `Drive Bot <https://github.com/alexanderaleskin/drive_bot>`_
 
 
 Deep in details
 ------------------
 
-В этой главе разберем как все работает под капотом. Так как основная задача библиотеки унифицировать написания кода и
-предоставить часто используемые функции для бота, то достаточно много логики базируются на ресурсах и парадигмах
-Django <https://www.djangoproject.com/>`_  и `Python-Telegram-Bot <https://python-telegram-bot.org/>`_ . Разберем
-ключевые моменты библиотеки на примере `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ .
+In this chapter, we will analyze how everything works under the hood. The main task of the library is to unify the code and
+provide frequently used functions when developing a bot, so a lot of logic is based on resources and paradigms
+Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_ . Let's analyze
+key features of the library on the example of `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ .
 
 
-Так как Боты в Телеграме спроектированы как инструмент для ответов на запросы пользователей, то написания бота начинается
-с обработчика запросов пользователей. Для этого используются стандартные инструменты библиотеки Python-Telegram-Bot ﹣
+Since Telegram bots are designed as a tool for responding to user requests, writing a bot begins
+from the user request handler. For this, the standard tools of the Python-Telegram-Bot library are used ﹣
 ``telegram.ext.Update``:
 
-.. code:: python
+..code::python
 
-    from telegram.ext import Updater
+     from telegram.ext import Updater
 
-    ...
+     ...
 
-    def main():
-        ...
+     def main():
+         ...
 
-        updater = Updater(bot=TG_DJ_Bot(TELEGRAM_TOKEN))
-        add_handlers(updater)
-        updater.start_polling()
-        updater.idle()
+         updater = Updater(bot=TG_DJ_Bot(TELEGRAM_TOKEN))
+         add_handlers(updater)
+         updater.start_polling()
+         updater.idle()
 
-    if __name__ == '__main__':
-        main()
-
-
-Как и указано в примере, для запуска бота (Update) необходимо указать несколько вещей (стандарт библиотеки ``Python-Telegram-Bot``):
-
-1. экземляр модели ``telegram.Bot`` с указанным API токеном. В данном случае, используется потомок класса ``telegram.Bot``
-``telegram_django_bot.tg_dj_bot.TG_DJ_Bot``, который имеет дополнительный функционал для удобства (к нему вернемся позже);
-2. Обработчики, которые будут вызываться в ответ на запросы пользователей.
+     if __name__ == '__main__':
+         main()
 
 
-В примере перечень обработчиков указывается в функции ``add_handlers``:
+As indicated in the example, to run the bot (Update) you need to specify a few things (the ``Python-Telegram-Bot`` library standard):
+
+1. an instance of the ``telegram.Bot`` model with the specified API token. In this case, a descendant of the ``telegram.Bot`` class is used.
+``telegram_django_bot.tg_dj_bot.TG_DJ_Bot``, which has additional functionality for convenience (we will return to it later);
+2. Handlers that will be called in response to user requests.
+
+
+In the example, the list of handlers is specified in the ``add_handlers`` function:
 
 
 
-.. code:: python
+..code::python
 
-    from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
+     from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
 
-    ...
+     ...
 
-    def add_handlers(updater: Updater):
-        dp = updater.dispatcher
-        dp.add_handler(RouterCallbackMessageCommandHandler())
+     def add_handlers(updater: Updater):
+         dp=updater.dispatcher
+         dp.add_handler(RouterCallbackMessageCommandHandler())
 
 
-В примере добавляется 1 супер обработчик ``RouterCallbackMessageCommandHandler``, который позволяет писать обработчики
-в стиле обработки запросов ссылок в ``Django``. ``RouterCallbackMessageCommandHandler`` позволяет обрабатывать
-сообщения, команды пользоваетелей и нажатия на кнопки пользователями. То есть заменяет собой хендлеры
-``MessageHandler, CommandHandler, CallbackQueryHandler`` . Так как библиотека ``Telegram Django Bot Bridge`` является расширением
-возможностей, то она не запрещает использовать в качестве обработчиков и стандартные обработчики библиотеки ``Python-Telegram-Bot``
-(иногда это просто необходимо, например если нужно обрабатывать ответы на опросы (необходимо использовать PollAnswerHandler)).
+The example adds 1 super handler ``RouterCallbackMessageCommandHandler``, which allows you to write handlers
+in the style of handling link requests in the same way as it is done in ``Django``. ``RouterCallbackMessageCommandHandler`` allows you to handle
+messages, user commands and button clicks by users. That is, it replaces the handlers
+``MessageHandler, CommandHandler, CallbackQueryHandler`` . Since the ``Telegram Django Bot Bridge`` library is an extension
+features, it does not prohibit the use of standard handlers of the ``Python-Telegram-Bot`` library as handlers.
+(sometimes it is simply necessary, for example, if you need to process responses to surveys (you need to use PollAnswerHandler)).
 
-`Django нотация <https://docs.djangoproject.com/en/4.1/topics/http/urls/>`_ описания обработчиков заключается в том, что в отдельном файле или файлах описываются пути до обработчиков.
-Как и в стандарте ``Django`` в настройках проекта указывается указывается главный файл (корень), где храняться пути до обработчиков или пути к отдельным группам обработчиков.
-Для указанания пути к файлу используется атрибут ``TELEGRAM_ROOT_UTRLCONF``. В шаблоне-примере имеем следующие настройки:
+`Django notation <https://docs.djangoproject.com/en/4.1/topics/http/urls/>`_ descriptions of handlers is that paths to handlers are described in a separate file or files.
+As in the ``Django`` standard, the main file (root) is specified in the project settings, where paths to handlers or paths to individual groups of handlers are stored.
+The ``TELEGRAM_ROOT_UTRLCONF`` attribute is used to specify the path to the file. In the example template, we have the following settings:
 
 
 ``bot_conf.settings.py``:
 
-.. code:: python
+..code::python
 
-    TELEGRAM_ROOT_UTRLCONF = 'bot_conf.utrls'
+     TELEGRAM_ROOT_UTRLCONF = 'bot_conf.utrls'
 
 
 ``bot_conf.utrls.py``:
 
-.. code:: python
+..code::python
 
-    from django.urls import re_path, include
+     from django.urls import re_path, include
 
-    urlpatterns = [
-        re_path('', include(('base.utrls', 'base'), namespace='base')),
-    ]
+     urlpatterns = [
+         re_path('', include(('base.utrls', 'base'), namespace='base')),
+     ]
 
 
-То есть, в файле подключается только 1 группа обработчиков (которая на идейнном уровне соответствует приложению ``base``). Можно
-добавлять и несколько групп, такое может быть удобным, если вы создаете несколько папок (приложений) для хранения кода. Как видно из импортов
-используется функции ``Django`` без какого либо переопределения.
+That is, only 1 group of handlers is connected in the file (which corresponds to the ``base`` application at the conceptual level). Can
+add several groups as well, this can be convenient if you create several folders (applications) for storing code. As you can see from the imports
+uses the ``Django`` function without any redefinition.
 
-В самом файле с группой обработчиков ``base.utrls.py`` имеем следующий код:
+In the file itself with a group of handlers ``base.utrls.py`` we have the following code:
 
 
 .. code:: python
@@ -271,58 +282,57 @@ Django <https://www.djangoproject.com/>`_  и `Python-Telegram-Bot <https://pyth
             re_path('some_debug_func', some_debug_func, name='some_debug_func'),
         ]
 
-Как видно, здесь указываются уже конечные обработчики, которые описаны в файле ``base.views.py``. Таким образом, если
-пользовать в боте пишет команду ``/start``, то ``Updater`` получает сообщение о действии пользователя и из набора своих
-обработчиков выбирает подходящий под запрос ``RouterCallbackMessageCommandHandler``, который в свою очередь среди
-``utrls`` находит подходящий путь ``'' + 'start'`` и передает управление функции start.
+Here, the end handlers are already specified, which are described in the ``base.views.py`` file. Thus, if
+user in the bot writes the command ``/start``, then ``Updater`` receives a message about the user's action and from a set of
+handlers selects the appropriate ``RouterCallbackMessageCommandHandler`` handler for the request, which in turn, among
+``utrls`` finds a suitable path ``'' + 'start'`` and transfers control to the start function.
 
-Такое распределение обработчиков позволяет группировать часть обработчиков в модули и достаточно быстро подключать или
-изменять их, при это не боятся, что возникнуть путаница какой обработчиков нужно вызвать, как это может быть, если все
-обработчики подтягивали в одно место из разных модулей как это требует ``Python-Telegram-Bot``.
+This distribution of handlers allows you to group part of the handlers into modules and quickly connect or
+change them, while not being afraid that confusion will arise which handlers need to be called, as it can be if all
+handlers were pulled into one place from different modules as required by ``Python-Telegram-Bot``.
 
-В примере, кроме функций обработчиков как ``def start`` и ``def some_debug_func``, также используются ViewSets, которые
-являются аггрегаторами нескольких функций. Концепт ViewSets заключается в том, что достаточно часто надо применять
-одинаковые операции для набора данных, такие как создать, изменить, показать, удалить набор данных. В библиотеки для
-таких целей создан класс ``telegram_django_bot.td_viewset.TelegaViewSet``, который в качестве набора данных использует
-Django ORM модель базы данных. ``TelegaViewSet`` имеет 5 функция для управления моделью:
-
+In the example, in addition to handler functions like ``def start`` and ``def some_debug_func``, ViewSets are also used, which
+are aggregators of several functions. The concept of ViewSets is that quite often you need to apply
+the same operations for a dataset, such as create, modify, show, delete a dataset. to libraries for
+for such purposes, the class ``telegram_django_bot.td_viewset.TelegaViewSet`` was created, which uses
+Django ORM database model. ``TelegaViewSet`` has 5 functions for managing the model:
 
 
 ========= ======== ===========================
- Метод     UTRL      Описание
+ Метод     UTRL      Description
 --------- -------- ---------------------------
-create     cr       Создание модели
-change     up       Изменения атрибутов
-delete     de       Удаление модели
-show_elem  se       Отображение модели
-show_list  sl       Отображение списка моделей
+create     cr       Create model
+change     up       Attribute changes
+delete     de       Deleting a model
+show_elem  se       Model display
+show_list  sl       Display a list of models
 ========= ======== ===========================
 
-Таким образом, если мы хотим вызвать метод ``BotMenuElemViewSet.create`` для создания элемента нам необходимо использовать
-следующий путь 'sb/cr' ﹣ по первой части пути 'sb/' ``RouterCallbackMessageCommandHandler`` передаст управление
-классу ``BotMenuElemViewSet``, а именно методу ``TelegaViewSet.dispatch``, который внутри себя по второй части пути
-``cr`` поймет, что нужно вызвать метод ``create``.
+Thus, if we want to call the ``BotMenuElemViewSet.create`` method to create an element, we need to use
+next path 'sb/cr' ﹣ on first part of path 'sb/' ``RouterCallbackMessageCommandHandler`` will transfer control
+to the ``BotMenuElemViewSet`` class, namely the ``TelegaViewSet.dispatch`` method, which is inside itself along the second part of the path
+``cr`` will understand that the ``create`` method needs to be called.
 
-Подводя итог по схеме распределения путей для вызова обработчиков, имеем следующее:
+Summing up the scheme for creating paths for calling handlers, we have the following:
 
-1. В качестве приемщика сообщений от Телеграм используется ``telegram.ext.Update``;
-2. В качестве обработчиков можно использовать стандартные обработчики библиотеки ``Python-Telegram-Bot``. Для использования
-схемы распределения путей Django и удобного использования ``TelegaViewSet`` необходимо использовать ``RouterCallbackMessageCommandHandler``.
-3. ``TelegaViewSet`` аггрегирует в себе набор стандартных функций для управления данных, что позволяет сгруппировать код,
-связанный с одним типом данных в одном месте.
+1. ``telegram.ext.Update`` is used as a receiver of messages from Telegram;
+2. Standard handlers of the ``Python-Telegram-Bot`` library can be used as handlers. For use
+Django's path allocation scheme and convenient use of ``TelegaViewSet`` you need to use ``RouterCallbackMessageCommandHandler``.
+3. ``TelegaViewSet`` aggregates a set of standard functions for managing data, which allows you to group code,
+associated with one data type in one place.
 
 
 
 TelegaViewSet features
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Как раннее упомянуто, TelegaViewSet содержит стандартные функции для управления данных.
-За счет таких стандартых методов обработки данных и получается в примере описать логику ``BotMenuElemViewSet`` в 40
-строчках кода, при этом еще и использовать некоторую кастомизаются для красивого отображения.
+As described above, TelegaViewSet contains standard functions for data manipulation.
+Due to such standard data processing methods, it turns out in the example to describe the logic of ``BotMenuElemViewSet`` in 40
+lines of code, while also using some customization for a beautiful display.
 
 
-Для использования всех возможностей класса TelegaViewSet необходимо от него наследоваться, как например, это сделано
-в шаблоне с BotMenuElemViewSet:
+To use all the features of the TelegaViewSet class, it is necessary to inherit a class from it, as, for example, this is done
+in the template with BotMenuElemViewSet:
 
 
 .. code:: python
@@ -332,12 +342,12 @@ TelegaViewSet features
     class BotMenuElemViewSet(TelegaViewSet):
 
 
-Для того, чтобы кастомизировать ViewSet необходимо указать 3 обязательных атрибута:
-1. ``viewset_name``  -  имя класса, используется для отображения пользователям бота
-2. ``telega_form``  - форма данных, используется для указания какие поля ORM модели базы данных использовать во viewset;
-3. ``queryset`` - базовый запрос для получения элементов модели.
+In order to customize the ViewSet, you must specify 3 required attributes:
+1. ``viewset_name`` - class name, used to display to bot users
+2. ``telega_form`` - data form, used to specify which fields of the ORM database model to use in the viewset;
+3. ``queryset`` - basic query for getting model elements.
 
-В шаблоне используется следующие значения:
+The template uses the following values:
 
 .. code:: python
 
@@ -357,46 +367,45 @@ TelegaViewSet features
         queryset = BotMenuElem.objects.all()
 
 
-где ``BotMenuElemForm`` является потомком класса ``Django ModelFrom``, поэтому имеет схожую структуру и способы параметризации.
-`` form_name `` -- обозначает название формы и используется в некоторых сообщениях, отправляемих пользователям Телеграмма.
+where ``BotMenuElemForm`` is a descendant of the ``Django ModelFrom`` class, so it has a similar structure and parameterization methods.
+`` form_name `` -- stands for the name of the form and is used in some messages sent to Telegram users.
 
 
+TelegaViewSet has quite a lot in common with Viewset analogs tailored for WEB development (for example,
+`django-rest-framework viewsets <https://www.django-rest-framework.org/api-guide/viewsets/>`_ ). However, as part of the development of Telegram bots, TelegaViewSet
+has a number of features:
 
-TelegaViewSet имеет достаточно много общего с аналогами Viewset, заточенных под WEB-разработку (например,
-`django-rest-framework viewsets <https://www.django-rest-framework.org/api-guide/viewsets/>`_ ). Однако в рамках разработки Телеграм ботов TelegaViewSet
-имеет ряд особенностей:
-
-1. Особый способ создания элементов;
-2. Отображение информации в ботах ограничен и чаще всего сводиться к отображению текста и кнопок, поэтому viewset
-кроме бизнес логики, включает в себя конструирование и стандартных отображения данных;
+1. A special way to create elements;
+2. The display of information in bots is limited and most often comes down to displaying text and buttons, so the viewset
+in addition to business logic, it includes the creation of standard responses to user actions in the form of messages with buttons.
 
 
-Формы
+Forms
 ************
 
 
-Так как в Телеграм нет возможностей создать формы (в классическом Веб понимании) и общение между ботом и пользователем происходит в чате, то
-наиболее интуитивно понятным решением для заполнения формы (создания элемента) является по элементное заполнение формы,
-когда сначала заполняется первый элемент формы, затем второй и тд. При этом в каком-то временном хранилище запоминать
-указанные значения, для того, чтобы в конце создать элемент из формы. ``TelegaModelForm`` и ``TelegaForm`` реализованы как раз
-таким способом, чтобы взять это процесс на себя. Отличие этих классов от стандартных Django классов заключается именно
-в модификации способа заполнения полей формы, в остальном они не отличаются от стандартных форм.
+Since Telegram does not have the ability to create forms (in the classic Web sense) and communication between the bot and the user takes place in a chat, then
+the most intuitive solution for filling out a form (creating an element) is filling the form element by element,
+when the first element of the form is filled first, then the second, and so on. With this approach, it is necessary to use temporary storage for remembering
+specified values in order to create an element from the form at the end. ``TelegaModelForm`` and ``TelegaForm`` are implemented just
+in such a way as to take over this process. The difference between these classes and the standard Django classes is precisely
+in the modification of the method of filling in the form fields, otherwise they do not differ from standard forms.
 
-``TelegaModelForm`` и ``TelegaForm`` как потомки Django ``ModelForm`` и ``Form`` имеет следующие параметры, которые
-достаточно часто нужно кастомизировать :
-1. Функция clean и другие `функции процесса верификации форм <https://docs.djangoproject.com/en/4.1/ref/forms/validation/>`_
-2. ``labels`` - название полей;
-3. ``forms.HiddenInput`` - обозначение скрытых полей (скрывание полей позволяет их не показывать пользователю,
-при этом использовать и настраивать в формах или в ``TelegaViewSet``)
+``TelegaModelForm`` and ``TelegaForm`` as Django descendants of ``ModelForm`` and ``Form`` have the following parameters, which
+quite often you need to customize:
+1. The clean function and other `form validation process functions <https://docs.djangoproject.com/en/4.1/ref/forms/validation/>`_
+2. ``labels`` - field names;
+3. ``forms.HiddenInput`` - designation of hidden fields (hiding fields allows them not to be shown to the user,
+while using and configuring in forms or in ``TelegaViewSet``)
 
 
 
-``TelegaViewSet`` рассчитан на взаимодействие с потомками класса ``TelegaModelForm`` и позволяет использовать
-генерировать формы как с простыми полями ``CharField, IntegerField`` так и с ``ForeignKey, ManyToManyField``. При этом,
-принимая во внимания особенности общения с ботом в Телеграмме, для повышения удобства заполнения форм пользователями
-в классе ``TelegaViewSet`` можно использовать словарь ``prechoice_fields_values``, который формирует список часто
-используемых значения для определенных полей формы. Это позволяет пользователям выбирать нужные значения из кнопок, а не
-вводить текст или значение вручную. В шаблоне есть пример использования этого поля:
+``TelegaViewSet`` is designed to interact with descendants of the ``TelegaModelForm`` class and allows you to use
+generate forms with both simple fields ``CharField, IntegerField`` and ``ForeignKey, ManyToManyField``. Wherein,
+taking into account the peculiarities of communication with the bot in the Telegram, to improve the convenience of filling out forms by users
+in the ``TelegaViewSet`` class, you can use the ``prechoice_fields_values`` dictionary, which forms a list frequently
+used values for certain form fields. This allows users to select the desired values from buttons rather than
+enter text or value manually. The template has an example of using this field:
 
 
 .. code:: python
@@ -411,16 +420,16 @@ TelegaViewSet имеет достаточно много общего с ана�
             )
         }
 
-В данном, случае для булевского поля ``is_visable`` указаны 2 значения для выбора правда и ложь с указанием как они
-отображаются пользователям. Иногда список значений надо формировать динамично, в этом случае можно переопределить
-``prechoice_fields_values`` как ``@property`` функцию.
+In this case, for the boolean field ``is_visable``, 2 values are specified for choosing true and false, indicating how they are
+displayed to users. Sometimes the list of values needs to be generated dynamically, in which case you can override
+``prechoice_fields_values`` as a ``@property`` function.
 
 
-Основная логика TelegaViewSet
+Main Logic of TelegaViewSet
 ************************************************
 
-Основной функций класса, которая по запросу пользователя выбирают функцию для вызова, является ``TelegaViewSet.dispatch``.
-Разберем ее логику подробнее:
+The main function of the class, which, at the request of the user, selects a function to call is ``TelegaViewSet.dispatch``.
+Let's analyze its logic in more detail:
 
 .. code:: python
 
@@ -456,33 +465,33 @@ TelegaViewSet имеет достаточно много общего с ана�
         return res
 
 
-Как и обычный обработчик функция на вход принимает 3 аргумента: bot, update, user. После их сохранения происходит
-определение текущего пути. Он определяется либо по нажатию кнопки в боте (значение ``callback_data`` кнопки), либо
-может храниться в атрибуте юзера ``user.current_utrl``. Второй вариант возможен, если пользователь вручную заносит
-какую-то информацию (например заполнил текстовое поле в форме). После происходит извлечение аргументов из пути
-для вызова конкретной функции. Хранение и взаимодействие с аргументами в пути схоже с работой ``sys.argv``. Так,
-например строка ``"sl&1&20"`` будет преобразована в список ``['sl', '1', '20']``. Знак разделитель между атрибутами
-по умолчанию выбран ``&`` и может быть изменен через переменную ``TelegaViewSet.ARGS_SEPARATOR_SYMBOL`` .
+Like a regular handler, the function takes 3 arguments as input: bot, update, user. After they are saved,
+determination of the current path. It is determined either by pressing a button in the bot (the ``callback_data`` value of the button), or
+can be stored in the user attribute ``user.current_utrl``. The second option is possible if the user manually enters
+some information (for example, filled in a text field in a form). After that, the arguments are extracted from the path
+to call a specific function. Storing and interacting with arguments in a path is similar to how ``sys.argv`` works. So,
+for example, the string ``"sl&1&20"`` will be converted to the list ``['sl', '1', '20']``. Separator character between attributes
+``&`` is selected by default and can be changed via the ``TelegaViewSet.ARGS_SEPARATOR_SYMBOL`` variable.
 
-При использовании ``TelegaViewSet`` скорей всего вам не придеться взаимодействовать со строкой аргументов на прямую, так
-как  ``dispatch`` преобразует строку в аргументы, а создать строку для ``callback_data`` кнопки c вызовом определенного метода и аргументов стоит исопльзовать
-``TelegaViewSet.gm_callback_data``. В случае, если нужно более низкоуровневое взаимодействие с аргументами функций, то
-можно воспользоваться функциями ``construct_utrl`` и ``get_utrl_params``.
+When using ``TelegaViewSet`` you most likely won't have to interact with the argument string directly, since
+how ``dispatch`` converts a string into arguments, and to create a string for a ``callback_data`` button with a call to a specific method and arguments, you should use
+``TelegaViewSet.gm_callback_data``. In case you need more low-level interaction with function arguments, then
+you can use the ``construct_utrl`` and ``get_utrl_params`` functions.
 
-После получения аргументов utrl_args и проверки прав доступа происходит непосредственно выбор и вызов функции. Первый
-аргумент utrl_args является своего рода коротким названием функции. Все последующие аргументы передаются как параметры
-в функцию. Внутри функции происходит необходимая бизнес логика и формирование данных для ответа пользователю. На выходе
-любая функция должна возвращать тип действия ``chat_action`` и параметры к этому действию ``chat_action_args``. По
-умолчани в классе ``TelegaViewSet`` есть только 1 действие ﹣ ``CHAT_ACTION_MESSAGE``, которое обозначает, что пользователю
-будет возвращено текстовое сообщение (возможно с кнопками). Аргументами к тему действию являются текст сообщения и список кнопок.
-
-
-После отработки функции происходит отправка ответа пользователю ``send_answer`` и логгирования действия пользователя.
+After receiving the utrl_args arguments and checking access rights, the function is directly selected and called. First
+the utrl_args argument is sort of a short name for the function. All subsequent arguments are passed as parameters
+into a function. Inside the function, the necessary business logic and the formation of data for a response to the user take place. At the exit
+any function must return the action type ``chat_action`` and the parameters to that action ``chat_action_args``. By
+By default, the ``TelegaViewSet`` class has only 1 action ﹣ ``CHAT_ACTION_MESSAGE``, which means that the user
+a text message will be returned (possibly with buttons). The arguments to the topic action are the text of the message and a list of buttons.
 
 
-В качестве метод для вызова в ``viewset_routing`` выступают методы ``create, update, delete, show_elem, show_list``.
-Также могут быть добавлены свои методы. Предположим, что хотим добавить метод ``def super_method(self, *args)``, тогда
-необходимо в классе добавить следующие строки:
+After the function is processed, a response is sent to the user ``send_answer`` and the user's action is logged.
+
+
+The methods to call in ``viewset_routing`` are the ``create, update, delete, show_elem, show_list`` methods.
+You can also add your own methods. Suppose we want to add a ``def super_method(self, *args)`` method, then
+you need to add the following lines in the class:
 
 .. code:: python
 
@@ -498,10 +507,10 @@ TelegaViewSet имеет достаточно много общего с ана�
             ...
 
 
-Где actions определяет список доступных методов, а command_routing_<method> определяет путь (url) метода.
+Where actions defines the list of available methods and command_routing_<method> defines the path (url) of the method.
 
-Как отмечалось выше метод ``dispatch`` совершает проверку прав доступа за счет вызова метода ``has_permissions``.
-Проверка осуществляется за счет классов указанных в ``permission_classes`` и по умолчанию используется класс
+As noted above, the ``dispatch`` method performs a permissions check by calling the ``has_permissions`` method.
+The check is performed by the classes specified in ``permission_classes`` and the default class is
 ``AllowAny``:
 
 .. code:: python
@@ -511,26 +520,27 @@ TelegaViewSet имеет достаточно много общего с ана�
 
 
 
-Дополнительные инструменты TelegaViewSet
+Additional TelegaViewSet Tools
 ************************************************
 
-В этом разделе описаны следующие функциональные возможности класса, которые упрощает написание кода:
+This section describes the following class functionality that makes it easier to write code:
 
-1. Внешние фильтры
-2. Параметры настройки отображения данных;
-3. Вспомогательные функции для отображения данных;
-4. Вспомогательные функции бизнес логики;
+1. External filters
+2. Data display setting options;
+3. Auxiliary functions for displaying data;
+4. Auxiliary functions of business logic;
 
 
-Внешние фильтры
+External filters
 +++++++++++++++++++++
 
-Достаточно часто возникают ситуации, когда нужно работать не со всеми элементами таблицы базы данных, а с какой-то
-группой (например, группа элементов с определенным внешним ключом). Для таких целей стоит использовать список ``foreign_filters``,
-который сохраняет в себе значения для фильтрации при вызове метода. Таким образом, в функции можно передавать
-дополнительные аргументы, которые не рушат основную логику стандартных функций. На примере шаблона можно модифицировать
-``BotMenuElemViewSet`` таким образом, что если указан дополнительный параметр, то в списке BotMenuElem отображаются
-только те элементы, которые содержат в своем поле ``сommand`` указанный параметр. Для этого надо внести следующие изменения в код:
+Quite often, situations arise when you need to work not with all the elements of a database table, but with some
+group (for example, a group of elements with a specific foreign key). For such purposes, you should use the ``foreign_filters`` list,
+which stores the values for filtering when the method is called. Thus, it is possible to pass to functions
+additional arguments that do not break the main logic of standard functions. Using the template example, you can modify
+``BotMenuElemViewSet`` so that if an additional parameter is specified, then the BotMenuElem list displays
+only those elements that contain the specified parameter in their ``command`` field. To do this, you need to make the following changes to the code:
+
 
 .. code:: python
 
@@ -546,89 +556,86 @@ TelegaViewSet имеет достаточно много общего с ана�
             return queryset
 
 
-Где foreign_filter_amount определяет количество внешних фильтров. Для вызова метода с значением фильтра необходимо
-их указывать сразу после названия функции в пути (utrls): ``"sb/sl&start&2"``, ``"sb/sl&start&2&1"``, ``"sb/sl&hello``.
-Стоит отметить, что если не хотим указывать фильтр, то необходимо пропустить аргумент в пути (utrls): ``"sb/sl&&2"``.
+Where foreign_filter_amount specifies the number of foreign filters. To call a method with a filter value, you must
+specify them immediately after the function name in the path (utrls): ``"sb/sl&start&2"``, ``"sb/sl&start&2&1"``, ``"sb/sl&hello``.
+It is worth noting that if we do not want to specify a filter, then we need to skip the argument in the path (utrls): ``"sb/sl&&2"``.
 
-На прямую конструировать и обрабатывать фильтры в путях (utrls) нет необходимости, так как функции ``gm_callback_data`` и ``get_utrl_params``
-умеют с ними работать. В gm_callback_data также есть параметр ``add_filters`` (по умолчанию True), который определяет
-включать ли в генерируемый путь (utrl) фильтры или нет. Если значение стоит False , то необходимо в аргументах функции
-вручную указать фильтры: ``self.gm_callback_data('show_list', 'start', add_filters=False)``  (сгенерирует ``"sb/sl&start``).
-Это позволяет менять значение фильтров при генерации путей.
+There is no need to construct and process filters in paths (utrls) directly, since the functions ``gm_callback_data`` and ``get_utrl_params``
+know how to work with them. gm_callback_data also has a parameter ``add_filters`` (default True) which defines
+whether to include filters in the generated path (utrl) or not. If the value is False , then it is necessary in the function arguments
+manually specify filters: ``self.gm_callback_data('show_list', 'start', add_filters=False)`` (will generate ``"sb/sl&start``).
+This allows you to change the value of filters when generating paths.
 
+A more detailed use of external filters can be seen in the example of `Drive Bot <https://github.com/alexanderaleskin/drive_bot>`_ .
 
-
-Параметры настройки отображения данных
+Data display options
 ++++++++++++++++++++++++++++++++++++++++++
 
-В ``TelegaViewSet`` есть следующие параметры для отображения элементов моделей:
+The ``TelegaViewSet`` has the following options for displaying model elements:
 
-* ``updating_fields: list`` - список полей, которые можно поменять (отображается при демонстрации элемента (``show_elem``);
-* ``show_cancel_updating_button: bool`` - показывает кнопку отмены при изменении полей, которая ведет обратно к демонстрации
-элемента (``show_elem``);
-* ``deleting_with_confirm: bool`` - при удалении элемента спрашивать подтверждение у пользователя;
-* ``cancel_adding_button: InlineKeyboardButtonDJ`` - кнопка отмены при создании элемента (метод ``create``);
-* ``use_name_and_id_in_elem_showing: bool``  - включает использование названия и ID элемента при отображении этого элемента (методы ``show_list`` и ``show_elem``);
-* ``meta_texts_dict: dict`` - словарь, который хранит стандартные текста для отображения (текста используются во всех методах);
-
-
-
-Однако, этих полей не всегда хватает и нужно переопределять логику вспомогательных функций для красивого отображения информации.
+* ``updating_fields: list`` - list of fields that can be changed (displayed when showing the element (``show_elem``);
+* ``show_cancel_updating_button: bool`` - shows a cancel button when changing fields, which leads back to the demo
+element(``show_elem``);
+* ``deleting_with_confirm: bool`` - ask the user for confirmation when deleting an element;
+* ``cancel_adding_button: InlineKeyboardButtonDJ`` - cancel button when creating an element (``create`` method);
+* ``use_name_and_id_in_elem_showing: bool`` - enables the use of the name and ID of the element when displaying this element (methods ``show_list`` and ``show_elem``);
+* ``meta_texts_dict: dict`` - a dictionary that stores standard texts for display (texts are used in all methods);
 
 
-Вспомогательные функции для отображения данных
+
+However, these fields are not always enough and you need to redefine the logic of auxiliary functions for a beautiful display of information.
+
+
+Helper functions for displaying data
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
-В классе ``TelegaViewSet`` описаны следующие вспомогательные функции для генерации ответного сообщения:
+The ``TelegaViewSet`` class describes the following helper functions for generating a response message:
 
 
-* ``def generate_message_no_elem`` - если не был найден элемент с таким ID;
-* ``def generate_message_success_created`` - при успешном создании модели ;
-* ``def generate_message_next_field`` - при переходе на следующий атрибут формы;
-* ``def generate_message_next_field_choice_buttons`` - генерирует кнопки для выбора вариантов для определенного атрибута формы (используется внутри ``generate_message_next_field``);
-* ``def generate_message_value_error`` - вывод ошибки при добавлении атрибута формы;
-* ``def generate_message_self_variant`` - формирует сообщение о необходимости написать значение вручную пользователем ;
-* ``def generate_show_fields`` - отображает поля модели в сообщении (используется в ``show_elem`` с параметром``full_show=True``, а в``show_list`` ﹣с ``full_show=False``);
-* ``def generate_value_str`` - генерирует строку с отображением определенного атрибута (используется в ``generate_show_fields``);
-* ``def generate_elem_buttons`` -  отображает доступные кнопки (действия) при демонстрации элемента модели (вызове ``show_elem``) ;
-* ``def gm_show_list_button_names`` - генерирует название кнопок элементов при отображении списка (вызове ``show_list``);
+* ``def gm_no_elem`` - if no element with this ID was found;
+* ``def gm_success_created`` - upon successful creation of the model ;
+* ``def gm_next_field`` - when moving to the next form attribute;
+* ``def gm_next_field_choice_buttons`` - generates buttons to select options for a specific form attribute (used inside ``gm_next_field``);
+* ``def gm_value_error`` - error output when adding a form attribute;
+* ``def gm_self_variant`` - generates a message about the need to write the value manually by the user;
+* ``def gm_show_elem_or_list_fields`` - displays model fields in the message (used in ``show_elem`` with ``full_show=True``, and in ``show_list`` ﹣with ``full_show=False``);
+* ``def gm_value_str`` - generates a string displaying a specific attribute (used in ``gm_show_elem_or_list_fields``);
+* ``def gm_show_elem_create_buttons`` - displays available buttons (actions) when showing a model element (calling ``show_elem``) ;
+* ``def gm_show_list_button_names`` - generates the names of item buttons when displaying the list (calling ``show_list``);
 
-В зависимости от потребности кастомизации необходимо переопределять эти функции.
+Depending on the need for customization, it is necessary to redefine these functions.
 
 
-
-Вспомогательные функции бизнес логики
+Auxiliary functions of business logic
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-В классе ``TelegaViewSet`` используются следующие вспомогательные функции:
+The ``TelegaViewSet`` class uses the following helper functions:
 
-* ``def get_queryset`` - позволяет конструировать запросы для всех методов (чаще всего для фильтраци элементов испоьзуется, как в примере выше);
-* ``def create_or_update_helper`` - основная логика для ``create`` и ``update`` методов;
-* ``def show_list_get_queryset`` - позволяет кастомизировать выбор элементов для отображения в show_list;
-
-
+* ``def get_queryset`` - allows you to construct queries for all methods (most often used to filter elements, as in the example above);
+* ``def create_or_update_helper`` - main logic for ``create`` and ``update`` methods;
+* ``def show_list_get_queryset`` - allows you to customize the selection of items to display in show_list;
 
 
 handler_decor
 ~~~~~~~~~~~~~~~~
 
-При написании своих обработчиков рекомендуется использовать обертку в виде  ``telegram_django_bot.utils.handler_decor``,
-которая берет на себя выполнение следующий функций:
+When writing your own handlers, it is recommended to use a wrapper like ``telegram_django_bot.utils.handler_decor``,
+which performs the following functions:
 
-* Получение или создание пользователя в базе данных;
-* В случае ошибки внутри функции обработчика возвращает пользователю сообщение об ошибке;
-* Логгирует вызов обработчика;
-* Отслеживает откуда перешел пользователь;
-* Выбор языка для отправки сообщений пользователю (в случае включенной локализации);
+* Getting or creating a user in the database;
+* In case of an error inside the handler function, returns an error message to the user;
+* Logs the handler call;
+* Tracks where the user came from;
+* Choice of language for sending messages to the user (in the case of localization enabled);
 
-Данный обработчик используется и внутри ``RouterCallbackMessageCommandHandler``, то есть при вызове ``TelegaViewSet`` классов.
+This handler is also used inside ``RouterCallbackMessageCommandHandler``, that is, when calling ``TelegaViewSet`` classes.
 
 Localization
 ~~~~~~~~~~~~~~~~
 
-В бибилотеке расширены инструменты `локализации Django <https://docs.djangoproject.com/en/4.1/topics/i18n/>`_ для использования в Телеграме.
-Для поддержки использования разных языков в библиотеке в ``telegram_django_bot.telegram_lib_redefinition`` расширяются возможности основных элементов библиотеки Python-Telegram-Bot:
+The library has expanded the `Django localization tools <https://docs.djangoproject.com/en/4.1/topics/i18n/>`_ for use in Telegram.
+To support the use of different languages, the main elements of the Python-Telegram-Bot library have been redefined in ``telegram_django_bot.telegram_lib_redefinition``:
 
 
 1. ``telegram.Bot`` -> ``telegram_django_bot.BotDJ`` ;
@@ -639,135 +646,127 @@ Localization
 
 
 
-При использовании этих классов в коде поддержка нескольких языков сводиться к следующим шагам:
+When using these classes in code, multilingual support comes down to the following steps:
 
-1. Указание необходимых настроек в settings: ``LANGUAGES`` - списка языков, ``LANGUAGE_CODE`` - язык по умолчанию;
-1. Необходимые тексты для перевода обертываются в ``gettext`` и ``gettext_lazy`` из ``django.utils.translation`` (как это работает в Django `почитать тут <https://docs.djangoproject.com/en/4.1/topics/i18n/translation/#standard-translation>`_ )
-2. Выполнение команды ``$ django-admin makemessages -a`` для генерации текстов для перевода (создаются в папке locale)
-3. Генерации файлов перевода ``$ django-admin compilemessages``.
+1. Specifying the necessary settings in the settings.py file: ``LANGUAGES`` - list of languages, ``LANGUAGE_CODE`` - default language;
+1. Necessary texts for translation are wrapped in ``gettext`` and ``gettext_lazy`` from ``django.utils.translation`` (how it works in Django `read here <https://docs.djangoproject.com/en /4.1/topics/i18n/translation/#standard-translation>`_ )
+2. Run command ``$ django-admin makemessages -a`` to generate texts for translation (created in locale folder)
+3. Generation of translation files ``$ django-admin compilemessages``.
 
-Для простоты понимания в шаблоне только часть функций использует локализацию. Использование можно посмотреть на примере
-функции ``some_debug_func``.
-
-
-
+For ease of understanding in the template, only a part of the functions uses localization. Usage can be seen in the example
+functions ``some_debug_func``.
 
 
 Extra lib features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-В библиотеке предоставлены некоторые дополнительные инструменты для удобства разработки и управления ботом.
-
+The library provides some additional tools for the convenience of developing and managing the bot.
 
 Модели библиотеки
 ************************************
 
 
-Для корректной работы ``TelegaViewSet`` и других компонентов необходимо, чтобы модель, представляющая пользователя в Телеграмме, была унаследована
-от ``telegram_django_bot.models.TelegramUser``, так как эти компоненты используют ее поля. ``TelegramUser`` унаследован от
-``django.contrib.auth.models.AbstractUser`` (что позволяет при необходимости авторизовывать пользователей на сайте) и имеет
-следующие дополнительные поля:
+For the ``TelegaViewSet`` and other components to work correctly, the model representing the user in the Telegram must be inherited
+from ``telegram_django_bot.models.TelegramUser`` as these components use its fields. ``TelegramUser`` inherited from
+``django.contrib.auth.models.AbstractUser`` (which allows you to authorize users on the site if necessary) and has
+the following additional fields:
 
-* ``id`` - переопределен для того, чтобы использовать ID пользователя из телеграмм;
-* ``seed_code`` -  произвольное значение от 1 до 100, чтобы случайнным образом группировать пользователей для проведения тестов и анализа;
-* ``telegram_username`` - username пользователя в телеграмме;
-* ``telegram_language_code`` - код языка в телеграмме (некоторые языки имеют наречия и как следствие кодовое обозначение больше чем 2 символа);
-* ``timezone`` - часовой пояс пользователя (для определения времени);
-* ``current_utrl`` - путь (utrl) последнего действия пользователя (используется во ``TelegaViewSet``);
-* ``current_utrl_code_dttm`` - время последнего действия, при сохранении пути;
-* ``current_utrl_context_db`` - контекст пути (utrl);
-* ``current_utrl_form_db`` - промежуточные данные для формы. Выступает как временное хранилище данных при заполнении формы;
+* ``id`` - redefined to use user ID from telegrams;
+* ``seed_code`` - arbitrary value from 1 to 100 to randomly group users for tests and analysis;
+* ``telegram_username`` - username of the user in the telegram;
+* ``telegram_language_code`` - telegram language code (some languages have adverbs and as a result the code designation is more than 2 symbols);
+* ``timezone`` - the user's time zone (for determining the time);
+* ``current_utrl`` - path (utrl) of the last user action (used in ``TelegaViewSet``);
+* ``current_utrl_code_dttm`` - time of the last action, when saving the path;
+* ``current_utrl_context_db`` - path context (utrl);
+* ``current_utrl_form_db`` - intermediate data for the form. Acts as a temporary data store when filling out a form;
 
-Поля ``current_utrl_<суффикс>`` нужны для работы ``TelegaViewSet``, ``TelegaModelForm`` и скорей всего не нужны будут
-при написании кода. Также модель имеет следующие методы (property) для упрощения взаимодействия с полями модели:
+Fields ``current_utrl_<suffix>`` are needed for ``TelegaViewSet``, ``TelegaModelForm`` and are needed in exceptional cases
+when writing code. The model also has the following methods (property) to simplify interaction with model fields:
 
-* ``current_utrl_form`` (property) - возвращает текущие временно сохраненные данные формы пути(utrl);
-* ``current_utrl_context`` (property) - возвращает текущие контекст пути(utrl);
-* ``save_form_in_db`` - сохраняет форму в поле ``current_utrl_form_db``;
-* ``save_context_in_db`` - сохраняет контекст в поле ``current_utrl_context_db``;
-* ``clear_status`` - очищает данные, связанные с использованным путем (поля ``current_utrl_<суффикс>`) ;
-* ``language_code`` (property) - возвращает код языка, на котором надо формировать сообщения пользователю ;
-
-
-В библиотеки описаны и дополнительные модели для повышения удобства использования бота:
-
-* ``ActionLog`` - хранит действия пользователей. Записи помогают собирать аналитику и делать триггеры, которые срабатывают при определенных действиях;
-* ``TeleDeepLink`` - хранит данные по каким ссылкам перешли новые пользователи (для анализа входного трафика);
-* ``BotMenuElem`` - Достаточно часто в боте нужны сообщения, которые имеют только статические данные. Такими страницами могут быть хелп и стартовые сообщения.
- ``BotMenuElem`` позволяет настраивать такие страницы через админку, при этом не надо ничего писать в коде. В ``BotMenuElem`` есть
-  возможность настраивать страницы в зависимости от стартовых deeplink. ``BotMenuElem`` умеет не только добавлять кнопки в сообщение, но и отправлять
-   разные файлы. Для этого необходимо указывать ``media`` и формат файла ``message_format``. ``BotMenuElem`` позволяет быстро менять блоки меню бота без необходимости вносить изменения в код;
-* ``BotMenuElemAttrText`` - вспомогательная модель для ``BotMenuElem``, отвечающая за перевод текстов на другие языки.
-Элементы сами создаются в зависимости от указанных языков в настройках ``LANGUAGES``. Вам необходимо лишь заполнять перевод в поле ``translated_text`` ;
-* ``Trigger`` - позволяет создавать триггеры в зависимости от определенных действий. Например, напомнить пользователю, что у него осталася
-недозаполненный заказ, или подарить скидку, если он бездействует долго. Для работы триггеров необходимо добавить задания из
-telegram_django_bot.tasks.create_triggers в расписание CeleryBeat;
-* ``UserTrigger`` - вспомогательная модель для ``Trigger``, контролирующая кому уже были отправлены триггеры;
+* ``current_utrl_form`` (property) - returns the current temporarily stored path form data (utrl);
+* ``current_utrl_context`` (property) - returns the current path context (utrl);
+* ``save_form_in_db`` - saves the form in the ``current_utrl_form_db`` field;
+* ``save_context_in_db`` - saves the context in the field ``current_utrl_context_db``;
+* ``clear_status`` - clears the data associated with the used path (fields ``current_utrl_<suffix>`) ;
+* ``language_code`` (property) - returns the language code in which messages should be generated for the user;
 
 
+The library also describes additional models to improve the usability of the bot:
+
+* ``ActionLog`` - stores user actions. Records help to collect analytics and make triggers that work on certain actions;
+* ``TeleDeepLink`` - stores data on which links new users have clicked (to analyze input traffic);
+* ``BotMenuElem`` - Quite often a bot needs messages that have only static data. These pages can be help and start messages.
+  ``BotMenuElem`` allows you to configure such pages through the admin panel, without having to write anything in the code. In ``BotMenuElem`` there is
+   the ability to customize pages depending on the starting deeplinks. ``BotMenuElem`` can not only add buttons to the message, but also send
+    different files. To do this, you must specify ``media`` and the file format ``message_format``. ``BotMenuElem`` allows you to quickly change bot menu blocks without having to make changes to the code;
+* ``BotMenuElemAttrText`` - helper model for ``BotMenuElem``, responsible for translating texts into other languages.
+The elements themselves are created depending on the specified languages in the ``LANGUAGES`` settings. You only need to fill in the translation in the ``translated_text`` field;
+* ``Trigger`` - allows you to create triggers depending on certain actions. For example, remind the user that he has left
+incomplete order, or give a discount if it is inactive for a long time. For triggers to work, you need to add tasks from
+telegram_django_bot.tasks.create_triggers to CeleryBeat schedule;
+* ``UserTrigger`` - helper model for ``Trigger``, controlling to whom triggers have already been sent;
 
 
-
-Дополнительные функции TG_DJ_Bot
+Additional functions of TG_DJ_Bot
 *********************************************
 
-Для повышения удобства ``TG_DJ_Bot`` обладает несколькими высокоуровневых функциями:
+To improve convenience, ``TG_DJ_Bot`` has several high-level functions:
 
-* ``send_format_message`` - Позволяет отправлять сообщение произвольного типа (внутри себя в зависимости от ``message_format`` подбирает нужный метод библиотеки ``Python-Telegram-Bot``).
-Важной возможностью этой функцией является то, что если пользователь нажал на кнопку, то предыдущее сообщение бота изменяется, а не отправляется новое.
-Если же все-таки в этом кейсе надо отправлять новое сообщение пользователю, то необходимо установить параметр ``only_send=True`` ;
-* ``edit_or_send`` - обертка метода ``send_format_message`` для отправки текстовых сообщений с кнопками;
-* ``send_botmenuelem`` - отправляет элемент ``BotMenuElem`` пользователю. Аргумент ``update`` может быть пустым;
-* ``task_send_message_handler`` - создан для отправки сообщений пользователей. Обрабатывает ситуации, когда пользователь
-заблокировал бота, удален или когда достигнут предел по отправки сообщений пользователям;
+* ``send_format_message`` - Allows you to send a message of an arbitrary type (internally, depending on the ``message_format`` selects the desired method of the ``Python-Telegram-Bot`` library).
+An important feature of this feature is that if the user clicks on the button, then the previous message of the bot is changed, rather than a new one is sent.
+If, nevertheless, in this case you need to send a new message to the user, then you need to set the parameter ``only_send=True`` ;
+* ``edit_or_send`` - wrapper of the ``send_format_message`` method for sending text messages with buttons;
+* ``send_botmenuelem`` - Sends a ``BotMenuElem`` to the user. The ``update`` argument can be empty;
+* ``task_send_message_handler`` - created for sending messages to users. Handles situations where the user
+blocked the bot, deleted or when the limit for sending messages to users is reached;
 
 
 Utils
 **********
 
-В библиотеки предоставлены следующие дополнительные функции:
+The following additional functions are provided in the libraries:
 
 
-* ``telegram_django_bot.utils.add_log_action`` - для создания ActionLog пользователя;
-* ``telegram_django_bot.utils.CalendarPagination`` - класс для генерации календаря с кнопками;
-* ``telegram_django_bot.user_viewset.UserViewSet`` - класс пользователя телеграм для изменения языка и часового пояса;
+* ``telegram_django_bot.utils.add_log_action`` - to create a user ActionLog;
+* ``telegram_django_bot.utils.CalendarPagination`` - class for generating a calendar with buttons;
+* ``telegram_django_bot.user_viewset.UserViewSet`` - telegram user class for changing language and time zone;
 
 
-Mapping details
+Routing details
 ********************
 
-В этом разделе чуть подробнее разберем работу ``RouterCallbackMessageCommandHandler`` и ``telega_reverse``.
+In this section, we will analyze the work of ``RouterCallbackMessageCommandHandler`` and ``telega_reverse`` in a little more detail.
 
-Как описывалось ранее ``RouterCallbackMessageCommandHandler`` используется для возможности написать обработчики в стиле
-Django. Также ``RouterCallbackMessageCommandHandler`` предоставляет возможность обрабатывать вызовы ``BotMenuElem`` как
-через команды, так и через callback. Это достигается за счет использования функций ``all_command_bme_handler`` и
-``all_callback_bme_handler``. По умолчанию обработка вызовов  ``BotMenuElem`` включена и обрабатывается после того, как
-не было найдено подходящего пути в описании utrls (путей в Django нотации). Если среди элементов ``BotMenuElem`` не было
-найдено подходящего варианта, то считается, что ``BotMenuElem`` настроены неверно. Отключить вызовы ``BotMenuElem``
-можно созданием класса с атрибутом ``only_utrl=True``.
+As described earlier ``RouterCallbackMessageCommandHandler`` is used to be able to write handlers in the style
+Django. Also ``RouterCallbackMessageCommandHandler`` provides the ability to handle calls to ``BotMenuElem`` as
+through commands, and through callback. This is achieved by using the functions ``all_command_bme_handler`` and
+``all_callback_bme_handler``. By default, ``BotMenuElem`` call handling is enabled and handled after
+no suitable path was found in the description of utrls (paths in Django notation). If there were no ``BotMenuElem`` elements
+If a match is found, the ``BotMenuElem`` is considered to be configured incorrectly and an error message is returned to the user. Disable calls to ``BotMenuElem``
+you can create a class with the ``only_utrl=True`` attribute.
 
-В шаблоне-примере есть использование функции ``telega_reverse``, суть которой заключается в генерации пути (строки) до
-обработчика, который указан в аргументе функции. Функция является аналогом `reverse <https://docs.djangoproject.com/en/4.1/ref/urlresolvers/#reverse>`_ функции Django
-и позволяет избегать ошибок при изменении путей.
-
-
+The example template contains the use of the ``telega_reverse`` function, the essence of which is to generate a path (string) to
+handler specified in the function argument. The function is analogous to the `reverse <https://docs.djangoproject.com/en/4.1/ref/urlresolvers/#reverse>`_ Django function
+and avoids errors when changing paths.
 
 
-Тесты
+
+Tests
 **********************
 
-В библиотеки также расширены возможности ``django.test.TestCase`` для использования с Телеграммом за счет класса ``TD_TestCase``.
+The library also extends the ``django.test.TestCase`` capabilities for use with Telegram through the ``TD_TestCase`` class.
 
-Наиболее простой подход для тестирования работы бота является генерации сообщений, которые ожидает бот от Телеграмма и
-отправка ответа в Телеграм (для проверки, что ответные сообщения бота в правильном формате). Класс ``TD_TestCase``
-имеет функцию ``create_update`` для простого и быстрого создания ``Telegram.Update``, который как раз и формирует запрос
-пользователя телеграмма. Таким образом, общий дизайн выглядит следующим образом:
+The simplest approach for testing the bot is to generate messages that the bot expects from Telegram and
+sending a response to Telegram (to check that the bot's response messages are in the correct format). Class ``TD_TestCase``
+has a function ``create_update`` for easy and fast creation of ``Telegram.Update`` which generates the request
+telegram user. So the overall design looks like this:
 
-1. Создается ``Telegram.Update``, эмулирующий запрос пользователя;
-2. Вызывается функция для проверки, автоматически происходит проверка отправляемых допустимых данных в Телеграм (за счет отправки сообщений тестовым пользователям);
-3. Проверяется корректность отправленных данных и изменений в бд за счет стандартных инструментов ``django.test.TestCase``.
+1. A ``Telegram.Update`` is created, emitting a user request;
+2. A function is called for verification, which, upon completion of execution, sends a real message to the user.
+Due to this, the correctness of the data format that Telegram expects is checked;
+3. The correctness of the sent data and changes to the database is checked using the standard tools ``django.test.TestCase``.
 
 
-Для работы тестов необходимо указать как минимум один ID тестового пользователя в разделе настроек ``TELEGRAM_TEST_USER_IDS``.
-Пользователю будут отправляться сообщения, поэтому необходимо, чтобы у бота было разрешение писать тестовому пользователю.
-
+For the tests to work, you must specify at least one test user ID in the ``TELEGRAM_TEST_USER_IDS`` settings section.
+Messages will be sent to the user, so the bot needs to have permission to write to the test user.

@@ -75,6 +75,7 @@ class TestTelegaViewSet(TD_TestCase):
         category = self.create_category()
         category.name = 'hats'
         category.save()
+        category2 = self.create_category()
 
         start = self.create_update({'text': '/start'})
         res_message = self.handle_update(start)
@@ -84,7 +85,14 @@ class TestTelegaViewSet(TD_TestCase):
             {'data': f'cat/de&{category.pk}'}
         )
         res_message = self.handle_update(action_delete_category)
-        message_delete_permission = res_message.text
+        self.assertEqual(res_message.text, 'Sorry, you do not have permissions to this action.')
+
+        action_delete_category2 = self.create_update(
+            res_message.to_dict(),
+            {'data': f'cat/de&{category2.pk}'}
+        )
+        res_message = self.handle_update(action_delete_category2)
+        self.assertEqual(res_message.text, f'Are you sure you want to delete Category  #{category2.pk}?')
 
         start = self.create_update({'text': '/start'})
         res_message = self.handle_update(start)
@@ -94,10 +102,15 @@ class TestTelegaViewSet(TD_TestCase):
             {'data': f'cat/up&{category.pk}&name'}
         )
         res_message = self.handle_update(action_update_name)
-        message_update_permission = res_message.text
-        
-        self.assertEqual(message_delete_permission, 'Sorry, you do not have permissions to this action.')
-        self.assertEqual(message_update_permission, 'Sorry, you do not have permissions to this action.')
+        self.assertEqual(res_message.text, 'Sorry, you do not have permissions to this action.')
+
+        action_update_name2 = self.create_update(
+            res_message.to_dict(),
+            {'data': f'cat/up&{category2.pk}&name'}
+        )
+        res_message = self.handle_update(action_update_name2)
+        self.assertEqual(res_message.text, 'Please, fill the field Category name\n\nmax length 128')
+
 
     def test_show_list_order_with_foreign_filters(self):
         category = self.create_category()

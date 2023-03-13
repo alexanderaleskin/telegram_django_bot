@@ -62,6 +62,7 @@ class TG_DJ_Bot(BotDJ):
 
             message_format = MESSAGE_FORMAT.TEXT
             mess = str(ERROR_MESSAGE)
+            logging.warning('Try to find BME, but there is no such models, so the error message shown for the client')
         else:
             language_code = settings.LANGUAGE_CODE
             if settings.USE_I18N and user.language_code != settings.LANGUAGE_CODE:

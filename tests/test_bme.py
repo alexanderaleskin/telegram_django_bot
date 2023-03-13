@@ -147,9 +147,6 @@ class TestBMEHandlers(TD_TestCase, BMEInitData):
         message = result[0]
         self.assertEqual('extra start', message.text)
 
-
-
-
     def test_command_handler_no_command(self):
         result = all_command_bme_handler(self.create_update({'text': '/not_exist'}), self.test_callback_context)
         message = result[0]
