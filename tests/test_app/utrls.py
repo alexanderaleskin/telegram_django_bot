@@ -2,7 +2,7 @@ from django.urls import re_path
 from .handlers import me
 
 from .views import CategoryViewSet, EntityViewSet, OrderViewSet
-from telegram_django_bot.td_viewset import UserViewSet
+from telegram_django_bot.user_viewset import UserViewSet
 
 urlpatterns = [
     re_path("^me$", me, name='self_info'),

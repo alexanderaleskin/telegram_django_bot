@@ -4,9 +4,11 @@ from .forms import CategoryForm, EntityForm, OrderForm
 from telegram_django_bot.telegram_lib_redefinition import InlineKeyboardButtonDJ
 from django.utils.translation import gettext_lazy as _
 from django.db import models
+from .permissions import CategoryPermission
 
 
 class CategoryViewSet(TelegaViewSet):
+    permission_classes = [CategoryPermission]
     command_routing_show_options = 'aaa'
     telega_form = CategoryForm
     queryset = Category.objects.all()
@@ -24,9 +26,9 @@ class CategoryViewSet(TelegaViewSet):
 
     prechoice_fields_values = {
         'name': (
-            ('шапки', 'шапки'),
-            ('обувь', 'обувь'),
-            ('одежда', 'одежда'),
+            ('hats', 'Hats'),
+            ('shoes', 'Shoes'),
+            ('cloth', 'Cloth'),
         ),
     }
 
@@ -55,5 +57,13 @@ class EntityViewSet(TelegaViewSet):
 class OrderViewSet(TelegaViewSet):
     telega_form = OrderForm
     queryset = Order.objects.all()
-    viewset_name = 'Заказ'
+    viewset_name = 'Order'
+    foreign_filter_amount = 1  # [entity_id]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        if self.foreign_filters[0]:
+            return queryset.filter(entities=self.foreign_filters[0])
+        else:
+            return queryset

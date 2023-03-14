@@ -5,7 +5,7 @@ class BasePermissionClass:
         raise NotImplementedError()
 
 
-class AllowAny(BasePermissionClass):
-    def has_permissions(self, *args, **kwargs):
+class PermissionAllowAny(BasePermissionClass):
+    def has_permissions(self, bot, update, user, utrl_args, **kwargs):
         return True
 

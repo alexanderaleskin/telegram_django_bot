@@ -65,4 +65,3 @@ class BoughtItem(models.Model):
     price = models.DecimalField(max_digits=16, decimal_places=2)
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
-

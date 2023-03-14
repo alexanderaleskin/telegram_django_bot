@@ -1,5 +1,4 @@
 import datetime
-import json
 
 from telegram_django_bot.test import DJ_TestCase
 from test_app.models import User
@@ -11,7 +10,6 @@ class TestUser(DJ_TestCase):
         user_id = settings.TELEGRAM_TEST_USER_IDS[0]
         self.user1 = User.objects.create(id=user_id, username=user_id)
         self.user2 = User.objects.create(id=1, username='1')
-
 
     def test_clear_status(self):
         self.user1.current_utrl = 'aa/bb'
@@ -53,8 +51,8 @@ class TestUser(DJ_TestCase):
         self.assertEqual(form_name, self.user1.current_utrl_form['form_name'])
 
         data_for_form = cleaned_data.copy()  # for form this change is okey
-        data_for_form['several_models'] = ['1', '1096400']
-        data_for_form['user'] = 1096400
+        data_for_form['several_models'] = ['1', str(self.user1.pk)]
+        data_for_form['user'] = self.user1.pk
         self.assertEqual(data_for_form, self.user1.current_utrl_form['form_data'])
 
         self.user1.save_form_in_db('TestForm2', {})
@@ -81,5 +79,3 @@ class TestUser(DJ_TestCase):
 
         self.user1.telegram_language_code = 'fr'  # not exist in settings
         self.assertEqual('en', self.user1.language_code)
-
-

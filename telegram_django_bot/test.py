@@ -4,35 +4,12 @@ from django.test import TestCase
 from django.conf import settings
 from django.utils import timezone
 from telegram import Update, Message, Chat, User as TelegramAPIUser, CallbackQuery
+from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
 # from telegram.utils.types import JSONDict, ODVInput
 # from telegram.utils.helpers import DEFAULT_NONE
 # from typing import Union
 
 from .tg_dj_bot import TG_DJ_Bot
-
-
-# class TestBot(TG_DJ_Bot):
-#     def __init__(self, *args, dry_send=False, **kwargs):
-#         super().__init__(*args, **kwargs)
-#
-#         self.dry_send = dry_send
-#
-#     def _post(
-#         self,
-#         endpoint: str,
-#         data: JSONDict = None,
-#         timeout: ODVInput[float] = DEFAULT_NONE,
-#         api_kwargs: JSONDict = None,
-#     ):   #-> Union[bool, JSONDict, None]:   # return different formats
-#
-#         if self.dry_send:
-#             return data
-#         else:
-#             return super()._post(endpoint, data, timeout, api_kwargs)
-
-
-class DJ_TestCase(TestCase):
-    pass
 
 
 test_bot = TG_DJ_Bot(token=settings.TELEGRAM_TOKEN)
@@ -55,9 +32,22 @@ class TestCallbackContext:
     bot = test_bot
 
 
+class DJ_TestCase(TestCase):
+    pass
+
+
 class TD_TestCase(DJ_TestCase):
     # test_bot = test_bot
-    test_callback_context = TestCallbackContext()
+    # test_callback_context = TestCallbackContext()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.test_callback_context = TestCallbackContext()
+        self.rc_mch = RouterCallbackMessageCommandHandler()
+        self.handle_update = lambda update: self.rc_mch.handle_update(
+            update, 'some_str', 'some_str', self.test_callback_context
+        )
 
     def create_update(self, message_kwargs:dict=None, callback_kwargs:dict=None, user_id=None,):
         if user_id is None and len(TELEGRAM_TEST_USER_IDS):
@@ -95,6 +85,7 @@ class TD_TestCase(DJ_TestCase):
             update_kwargs['message'] = message
 
         return Update(**update_kwargs)
+
 
 
 

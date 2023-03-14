@@ -1,11 +1,7 @@
-from django.forms.forms import BaseForm, DeclarativeFieldsMetaclass, ErrorList, ErrorDict
+from django.forms.forms import BaseForm, DeclarativeFieldsMetaclass, ErrorDict
 from django.forms.models import BaseModelForm, ModelFormMetaclass, ModelMultipleChoiceField
-from django.forms import HiddenInput, CharField, DurationField
+from django.forms import HiddenInput
 from django.db import models
-from django.utils.translation import gettext_lazy as _
-from django.utils import translation
-from django.contrib.auth import get_user_model
-from django.conf import settings
 
 
 # todo: PreChoise logic to fields
@@ -21,7 +17,7 @@ class TelegaErrorDict(ErrorDict):
         return self.as_text()
 
 
-class BaseTelegaForm(BaseForm):
+class BaseTelegramForm(BaseForm):
     # field_order = None
     form_name = ''
 
@@ -119,7 +115,7 @@ class BaseTelegaForm(BaseForm):
         self._post_clean()
 
 
-class BaseTelegaModelForm(BaseTelegaForm, BaseModelForm):
+class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
     def __init__(self, user, data=None, files=None, initial=None, instance=None):
         self.user = user
         if instance is None:
@@ -171,42 +167,16 @@ class BaseTelegaModelForm(BaseTelegaForm, BaseModelForm):
             BaseModelForm.save(self, commit=commit)
             self.user.clear_status()
         else:
-            BaseTelegaForm.save(self, commit=commit)
+            BaseTelegramForm.save(self, commit=commit)
 
 
-class TelegaForm(BaseTelegaForm, metaclass=DeclarativeFieldsMetaclass):
+class TelegramForm(BaseTelegramForm, metaclass=DeclarativeFieldsMetaclass):
     """just for executing metaclass"""
 
 
-class TelegaModelForm(BaseTelegaModelForm, metaclass=ModelFormMetaclass):
+class TelegramModelForm(BaseTelegramModelForm, metaclass=ModelFormMetaclass):
     """just for executing metaclass"""
 
 
-
-class UserForm(TelegaModelForm):
-    form_name = _('User')
-
-    class Meta:
-        model = get_user_model()
-
-        fields = ['timezone', 'telegram_language_code', ]
-
-        labels = {
-            "timezone": _("Timezone"),
-            'telegram_language_code': _("Language"),
-        }
-
-    def save(self, commit=True, is_completed=True):
-        if self.is_valid() and self.next_field is None and (is_completed or self.instance.pk):
-            # full valid form
-
-            BaseModelForm.save(self, commit=commit)
-            self.user.refresh_from_db()
-            self.user.clear_status()
-
-            if settings.USE_I18N:
-                translation.activate(self.user.language_code)
-        else:
-            BaseTelegaForm.save(self, commit=commit)
-
-
+TelegaForm = TelegramForm
+TelegaModelForm = TelegramModelForm
