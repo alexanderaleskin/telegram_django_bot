@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.conf import settings
 from django.utils import timezone
 from telegram import Update, Message, Chat, User as TelegramAPIUser, CallbackQuery
+from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
 # from telegram.utils.types import JSONDict, ODVInput
 # from telegram.utils.helpers import DEFAULT_NONE
 # from typing import Union
@@ -37,7 +38,16 @@ class DJ_TestCase(TestCase):
 
 class TD_TestCase(DJ_TestCase):
     # test_bot = test_bot
-    test_callback_context = TestCallbackContext()
+    # test_callback_context = TestCallbackContext()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.test_callback_context = TestCallbackContext()
+        self.rc_mch = RouterCallbackMessageCommandHandler()
+        self.handle_update = lambda update: self.rc_mch.handle_update(
+            update, 'some_str', 'some_str', self.test_callback_context
+        )
 
     def create_update(self, message_kwargs:dict=None, callback_kwargs:dict=None, user_id=None,):
         if user_id is None and len(TELEGRAM_TEST_USER_IDS):
@@ -75,6 +85,7 @@ class TD_TestCase(DJ_TestCase):
             update_kwargs['message'] = message
 
         return Update(**update_kwargs)
+
 
 
 

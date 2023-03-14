@@ -1,10 +1,9 @@
-from telegram_django_bot.td_viewset import TelegramViewSet
-from telegram_django_bot.user_viewset import UserViewSet
+# from telegram_django_bot.td_viewset import TelegramViewSet
+# from telegram_django_bot.user_viewset import UserViewSet
 from telegram_django_bot.test import TD_TestCase
 from telegram_django_bot.routing import telega_reverse, RouterCallbackMessageCommandHandler
 from django.conf import settings
 
-from pprint import pprint
 
 from test_app.models import Entity, Order, Size, User, Category
 from test_app.views import CategoryViewSet, EntityViewSet, OrderViewSet
@@ -29,10 +28,10 @@ class TestTelegaViewSet(TD_TestCase):
             user=self.user,
             bot=self.test_callback_context.bot
         )
-        self.rc_mch = RouterCallbackMessageCommandHandler()
-        self.handle_update = lambda update: self.rc_mch.handle_update(
-            update, 'some_str', 'some_str', self.test_callback_context
-        )
+        # self.rc_mch = RouterCallbackMessageCommandHandler()
+        # self.handle_update = lambda update: self.rc_mch.handle_update(
+        #     update, 'some_str', 'some_str', self.test_callback_context
+        # )
 
     def create_size(self):
         size = Size.objects.create(
