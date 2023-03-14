@@ -49,8 +49,9 @@ You can install via ``pip``:
 Then you can configurate it in your app:
 
 
-1. Add "telegram_django_bot" to your INSTALLED_APPS setting like this::
+1. Add "telegram_django_bot" to your INSTALLED_APPS setting like this:
 
+.. code:: python
     INSTALLED_APPS = [
         ...
         'telegram_django_bot',
@@ -66,7 +67,7 @@ in settings).
 
 * ``TELEGRAM_ROOT_UTRLCONF`` -  (same as ``ROOT_URLCONF`` for WEB) for using django notation in callback (routing) (strongly recommended)
 
-Not necessary, but useful settings:
+  Not necessary, but useful settings:
 
 * ``TELEGRAM_TOKEN`` - for adding "triggers",
 * ``TELEGRAM_TEST_USER_IDS`` - for adding tests for your bot,
@@ -183,7 +184,7 @@ Since Telegram bots are designed as a tool for responding to user requests, writ
 from the user request handler. For this, the standard tools of the Python-Telegram-Bot library are used ﹣
 ``telegram.ext.Update``:
 
-..code::python
+.. code:: python
 
      from telegram.ext import Updater
 
@@ -212,7 +213,7 @@ In the example, the list of handlers is specified in the ``add_handlers`` functi
 
 
 
-..code::python
+.. code:: python
 
      from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
 
@@ -237,14 +238,14 @@ The ``TELEGRAM_ROOT_UTRLCONF`` (same as ``ROOT_URLCONF`` for WEB) attribute is u
 
 ``bot_conf.settings.py``:
 
-..code::python
+.. code:: python
 
      TELEGRAM_ROOT_UTRLCONF = 'bot_conf.utrls'
 
 
 ``bot_conf.utrls.py``:
 
-..code::python
+.. code:: python
 
      from django.urls import re_path, include
 
@@ -317,10 +318,8 @@ the ``BotMenuElemViewSet`` class, namely the ``TelegaViewSet.dispatch`` method, 
 To sum up the scheme of handlers routing, there are following key points:
 
 1. ``telegram.ext.Update`` is used as a receiver of messages from Telegram;
-2. Standard handlers of the ``Python-Telegram-Bot`` library can be used as handlers. For convenient use
-Django's path scheme and ``TelegaViewSet`` you need to use ``RouterCallbackMessageCommandHandler``.
-3. ``TelegaViewSet`` aggregates a set of standard functions for managing data, what is made possible to group code
-associated with one type of data type in one class (place).
+2. Standard handlers of the ``Python-Telegram-Bot`` library can be used as handlers. For convenient use Django's path scheme and ``TelegaViewSet`` you need to use ``RouterCallbackMessageCommandHandler``.
+3. ``TelegaViewSet`` aggregates a set of standard functions for managing data, what is made possible to group code associated with one type of data type in one class (place).
 
 
 
@@ -344,6 +343,7 @@ in the ``BotMenuElemViewSet``:
 
 
 In order to customize the ViewSet, you must specify 3 required attributes:
+
 1. ``viewset_name`` - class name, used to display to telegram users
 2. ``telega_form`` - data form, used to specify which fields of the ORM database model to use in the viewset;
 3. ``queryset`` - basic query for getting model elements.
@@ -378,8 +378,7 @@ TelegaViewSet has quite a lot in common with Viewset analogs tailored for WEB de
 has some special features:
 
 1. An unusual way to create elements;
-2. The display of information in bots is limited and most often comes down to displaying text and buttons, so the viewset
-in addition to business logic includes the creation of standard responses to user actions in the form of messages with buttons.
+2. The display of information in bots is limited and most often comes down to displaying text and buttons, so the viewset in addition to business logic includes the creation of standard responses to user actions in the form of messages with buttons.
 
 
 
@@ -394,8 +393,8 @@ specified values in order to create an element from the form at the end. ``Teleg
 in such way for taking over this process. The difference between these classes and the standard Django classes is precisely
 in the modification of the method of filling in the form fields, otherwise they do not differ from standard forms.
 
-``TelegaModelForm`` and ``TelegaForm`` as Django descendants of ``ModelForm`` and ``Form`` have the following parameters, which
- you may need to customize:
+``TelegaModelForm`` and ``TelegaForm`` as Django descendants of ``ModelForm`` and ``Form`` have the following parameters, which you may need to customize:
+
 1. The clean function and other `form validation process functions <https://docs.djangoproject.com/en/4.1/ref/forms/validation/>`_
 2. ``labels`` - field names;
 3. ``forms.HiddenInput`` - designation of hidden fields (hiding fields allows them not to be shown to the user,
@@ -706,9 +705,7 @@ The library also describes additional models to improve the usability of the bot
 * ``ActionLog`` - stores user actions. Records help to collect analytics and make triggers that work on certain actions;
 * ``TeleDeepLink`` - stores data on which links new users have clicked (to analyze input traffic);
 * ``BotMenuElem`` - Quite often a bot needs messages that have only static data. These pages can be help and start messages.
-  ``BotMenuElem`` allows you to configure such pages through the admin panel, without having to write anything in the code. In ``BotMenuElem`` there is
-   the ability to customize pages depending on the starting deeplinks. ``BotMenuElem`` can not only add buttons to the message, but also send
-    different files. To do this, you must specify ``media`` and the file format ``message_format``. ``BotMenuElem`` allows you to quickly change bot menu blocks without having to make changes to the code;
+  ``BotMenuElem`` allows you to configure such pages through the admin panel, without having to write anything in the code. In ``BotMenuElem`` there is the ability to customize pages depending on the starting deeplinks. ``BotMenuElem`` can not only add buttons to the message, but also send different files. To do this, you must specify ``media`` and the file format ``message_format``. ``BotMenuElem`` allows you to quickly change bot menu blocks without having to make changes to the code;
 * ``BotMenuElemAttrText`` - helper model for ``BotMenuElem``, responsible for translating texts into other languages.
 The elements themselves are created depending on the specified languages in the ``LANGUAGES`` settings. You only need to fill in the translation in the ``translated_text`` field;
 * ``Trigger`` - allows you to create triggers depending on certain actions. For example, remind the user that he has left
@@ -772,11 +769,10 @@ has a function ``create_update`` for easy and fast creation of ``Telegram.Update
 telegram user. So the overall design looks like this:
 
 1. A ``Telegram.Update`` is created for emitting a user request;
-2. The ``handle_update`` lambda function, which uses ``RouterCallbackMessageCommandHandler``,  is called with created update.
-It does its staff and as a result sends a real message to the test user. Due to this, the correctness of the responsing data format  is checked by Telegram;
+2. The ``handle_update`` lambda function, which uses ``RouterCallbackMessageCommandHandler``,  is called with created update. It does its staff and as a result sends a real message to the test user. Due to this, the correctness of the responsing data format  is checked by Telegram;
 3. The correctness of the sent data and changes in the database is checked using the standard tools ``django.test.TestCase``.
 
 You need to specify at least one test user ID in the ``TELEGRAM_TEST_USER_IDS`` settings section for correct tests work.
 Messages will be sent to that user, so the bot needs to have permission to write to that user.
 
-In the ``tests`` folder you could find examples of test.
+In the ``tests`` folder you could find test examples.

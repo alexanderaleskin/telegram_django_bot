@@ -17,10 +17,12 @@ from django.utils.translation import gettext_lazy as _
 
 
 ERROR_MESSAGE = _('Oops! It seems that an error has occurred, please write to support (contact in bio)!')
+LOGGING_TELEGRAM_ACTIONS = getattr(settings, 'TELEGRAM_ACTION_LOG', True)
 
 
 def add_log_action(user_id, action):
-    ActionLog.objects.create(type=action, user_id=user_id)
+    if LOGGING_TELEGRAM_ACTIONS:
+        ActionLog.objects.create(type=action, user_id=user_id)
 
 
 def handler_decor(log_type='F', update_user_info=True):
