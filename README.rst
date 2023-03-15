@@ -41,7 +41,7 @@ Install
 
 You can install via ``pip``:
 
-.. code:: shell
+.. code-block:: shell
 
     $ pip install telegram_django_bot
 
@@ -51,7 +51,8 @@ Then you can configurate it in your app:
 
 1. Add "telegram_django_bot" to your INSTALLED_APPS setting like this:
 
-.. code:: python
+.. code-block:: python
+
     INSTALLED_APPS = [
         ...
         'telegram_django_bot',
@@ -74,7 +75,9 @@ in settings).
 * Make sure, that ``LANGUAGE_CODE``, ``LANGUAGE_CODE``, ``USE_I18N`` are also used in the library for language localization.
 
 
-4. This step connects ``Telegram Django Bot Bridge`` with ``Python-Telegram-Bot``. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF ::
+4. This step connects ``Telegram Django Bot Bridge`` with ``Python-Telegram-Bot``. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF :
+
+.. code-block:: python
 
     updater = Updater(bot=TG_DJ_Bot(settings.TELEGRAM_TOKEN))
     updater.dispatcher.add_handler(RouterCallbackMessageCommandHandler())
@@ -104,7 +107,7 @@ response (it is possible to overwrite these templates). By default, TelegaViewSe
 
 So, if, for example, you have a model of some *request* in your project:
 
-.. code:: python
+.. code-block:: python
 
     from django.db import models
 
@@ -117,7 +120,7 @@ So, if, for example, you have a model of some *request* in your project:
 
 The next piece of code gives opportunity for full managing (create, update, show, delete) of this model from Telegram:
 
-.. code:: python
+.. code-block:: python
 
     from telegram_django_bot import forms as td_forms
     from telegram_django_bot.td_viewset import TelegaViewSet
@@ -149,7 +152,7 @@ dispatcher as it is mentioned above in the *Install paragraph*.
 
 For correct mapping *RequestViewSet*  you should write in the TELEGRAM_ROOT_UTRLCONF file something like this:
 
-.. code:: python
+.. code-block:: python
 
     from django.urls import re_path
     from .views import RequestViewSet
@@ -184,7 +187,7 @@ Since Telegram bots are designed as a tool for responding to user requests, writ
 from the user request handler. For this, the standard tools of the Python-Telegram-Bot library are used ﹣
 ``telegram.ext.Update``:
 
-.. code:: python
+.. code-block:: python
 
      from telegram.ext import Updater
 
@@ -213,7 +216,7 @@ In the example, the list of handlers is specified in the ``add_handlers`` functi
 
 
 
-.. code:: python
+.. code-block:: python
 
      from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
 
@@ -238,14 +241,14 @@ The ``TELEGRAM_ROOT_UTRLCONF`` (same as ``ROOT_URLCONF`` for WEB) attribute is u
 
 ``bot_conf.settings.py``:
 
-.. code:: python
+.. code-block:: python
 
      TELEGRAM_ROOT_UTRLCONF = 'bot_conf.utrls'
 
 
 ``bot_conf.utrls.py``:
 
-.. code:: python
+.. code-block:: python
 
      from django.urls import re_path, include
 
@@ -261,7 +264,7 @@ As you can see ``Django`` functions are imported without any redefinition.
 There is following code in the specified included file ``base.utrls.py`` :
 
 
-.. code:: python
+.. code-block:: python
 
     from django.urls import re_path
     from django.conf import settings
@@ -335,7 +338,7 @@ To use all the features of the TelegaViewSet in your class, it should be inherit
 in the ``BotMenuElemViewSet``:
 
 
-.. code:: python
+.. code-block:: python
 
     from telegram_django_bot.td_viewset import TelegaViewSet
 
@@ -351,7 +354,7 @@ In order to customize the ViewSet, you must specify 3 required attributes:
 
 The ``BotMenuElemViewSet`` is used the following values:
 
-.. code:: python
+.. code-block:: python
 
     from telegram_django_bot import forms as td_forms
     from telegram_django_bot.models import BotMenuElem
@@ -395,10 +398,9 @@ in the modification of the method of filling in the form fields, otherwise they 
 
 ``TelegaModelForm`` and ``TelegaForm`` as Django descendants of ``ModelForm`` and ``Form`` have the following parameters, which you may need to customize:
 
-1. The clean function and other `form validation process functions <https://docs.djangoproject.com/en/4.1/ref/forms/validation/>`_
+1. The clean function and other `form validation process functions <https://docs.djangoproject.com/en/4.1/ref/forms/validation/>`_ ;
 2. ``labels`` - field names;
-3. ``forms.HiddenInput`` - designation of hidden fields (hiding fields allows them not to be shown to the user,
-while using and configuring in forms or in ``TelegaViewSet``)
+3. ``forms.HiddenInput`` - designation of hidden fields (hiding fields allows them not to be shown to the user, while using and configuring in forms or in ``TelegaViewSet``).
 
 
 
@@ -410,7 +412,7 @@ This allows users to select the desired values by clicking buttons rather than
 writing text manually. The template has an example of using this field:
 
 
-.. code:: python
+.. code-block:: python
 
     class BotMenuElemViewSet(TelegaViewSet):
         ...
@@ -434,7 +436,7 @@ Key logic of TelegaViewSet
 The main function of the class, which is selected the function for managing data by the request of the user,  is ``TelegaViewSet.dispatch``.
 Let's analyze its logic in more detail:
 
-.. code:: python
+.. code-block:: python
 
     def dispatch(self, bot, update, user):
 
@@ -496,7 +498,7 @@ The methods to call in ``viewset_routing`` are the ``create, update, delete, sho
 You can also add your own methods. Suppose we want to add a ``def super_method(self, *args)`` method, then
 you need to add the following lines in the class:
 
-.. code:: python
+.. code-block:: python
 
     class SomeViewSetClass(TelegaViewSet):
         ...
@@ -515,7 +517,7 @@ Where ``actions`` defines the list of available methods and ``command_routing_<m
 As noted above, the ``dispatch`` method performs a permissions check by calling the ``has_permissions`` method.
 The check is performed by the classes specified in ``permission_classes`` and the default class is ``AllowAny``:
 
-.. code:: python
+.. code-block:: python
 
     class TelegaViewSet:
         permission_classes = [AllowAny]
@@ -545,7 +547,7 @@ additional arguments that do not break the key logic of standard functions. Usin
 only those elements that contain the specified parameter in their ``command`` attribute. To do this, you need to make the following changes to the code:
 
 
-.. code:: python
+.. code-block:: python
 
     class BotMenuElemViewSet(TelegaViewSet):
         ...
@@ -577,12 +579,11 @@ Data display options
 The ``TelegaViewSet`` has the following options for displaying model elements:
 
 * ``updating_fields: list`` - list of fields that can be changed (displayed when showing the element (``show_elem``);
-* ``show_cancel_updating_button: bool = True`` - shows a cancel button when changing fields, which leads back to the demo
-element(``show_elem``);
+* ``show_cancel_updating_button: bool = True`` - shows a cancel button when changing fields, which leads back to the displaying element (``show_elem``);
 * ``deleting_with_confirm: bool = True`` - ask the user for confirmation when deleting an element;
 * ``cancel_adding_button: InlineKeyboardButtonDJ = None`` - cancel button when creating an element (``create`` method);
 * ``use_name_and_id_in_elem_showing: bool = True`` - enables the use of the name and ID of the element when displaying this element (methods ``show_list`` and ``show_elem``);
-* ``meta_texts_dict: dict`` - a dictionary that stores standard texts for display (texts are used in all methods);
+* ``meta_texts_dict: dict`` - a dictionary that stores standard texts for display (texts are used in all methods).
 
 
 
@@ -691,7 +692,7 @@ when writing code. The model also has the following methods (property) to simpli
 * ``current_utrl_context`` (property) - returns the current path context (utrl);
 * ``save_form_in_db`` - saves the form in the ``current_utrl_form_db`` field;
 * ``save_context_in_db`` - saves the context in the field ``current_utrl_context_db``;
-* ``clear_status`` - clears the data associated with the used path (fields ``current_utrl_<suffix>`) ;
+* ``clear_status`` - clears the data associated with the used path (fields ``current_utrl_<suffix>``) ;
 * ``language_code`` (property) - returns the language code in which messages should be generated for the user;
 
 
@@ -704,13 +705,9 @@ The library also describes additional models to improve the usability of the bot
 
 * ``ActionLog`` - stores user actions. Records help to collect analytics and make triggers that work on certain actions;
 * ``TeleDeepLink`` - stores data on which links new users have clicked (to analyze input traffic);
-* ``BotMenuElem`` - Quite often a bot needs messages that have only static data. These pages can be help and start messages.
-  ``BotMenuElem`` allows you to configure such pages through the admin panel, without having to write anything in the code. In ``BotMenuElem`` there is the ability to customize pages depending on the starting deeplinks. ``BotMenuElem`` can not only add buttons to the message, but also send different files. To do this, you must specify ``media`` and the file format ``message_format``. ``BotMenuElem`` allows you to quickly change bot menu blocks without having to make changes to the code;
-* ``BotMenuElemAttrText`` - helper model for ``BotMenuElem``, responsible for translating texts into other languages.
-The elements themselves are created depending on the specified languages in the ``LANGUAGES`` settings. You only need to fill in the translation in the ``translated_text`` field;
-* ``Trigger`` - allows you to create triggers depending on certain actions. For example, remind the user that he has left
-incomplete order, or give a discount if it is inactive for a long time. For triggers to work, you need to add tasks from
-``telegram_django_bot.tasks.create_triggers`` to CeleryBeat schedule;
+* ``BotMenuElem`` - Quite often a bot needs messages that have only static data. These pages can be help and start messages. ``BotMenuElem`` allows you to configure such pages through the admin panel, without having to write anything in the code. In ``BotMenuElem`` there is the ability to customize pages depending on the starting deeplinks. ``BotMenuElem`` can not only add buttons to the message, but also send different files. To do this, you must specify ``media`` and the file format ``message_format``. ``BotMenuElem`` allows you to quickly change bot menu blocks without having to make changes to the code;
+* ``BotMenuElemAttrText`` - helper model for ``BotMenuElem``, responsible for translating texts into other languages. The elements themselves are created depending on the specified languages in the ``LANGUAGES`` settings. You only need to fill in the translation in the ``translated_text`` field;
+* ``Trigger`` - allows you to create triggers depending on certain actions. For example, remind the user that he has left incomplete order, or give a discount if it is inactive for a long time. For triggers to work, you need to add tasks from ``telegram_django_bot.tasks.create_triggers`` to CeleryBeat schedule;
 * ``UserTrigger`` - helper model for ``Trigger``, controlling to whom triggers have already been sent;
 
 
@@ -719,13 +716,10 @@ Additional functions of TG_DJ_Bot
 
 To improve convenience, ``TG_DJ_Bot`` has several high-level functions:
 
-* ``send_format_message`` - Allows you to send a message of an arbitrary type (internally, depending on the ``message_format`` selects the appropriate method of the ``Python-Telegram-Bot`` library).
-An important feature of this function is that if the user clicks on the button, then the previous message of the bot is changed, rather than a new one is sent.
-If, nevertheless, in this case you need to send a new message to the user, then you need to set the parameter ``only_send=True`` ;
+* ``send_format_message`` - Allows you to send a message of an arbitrary type (internally, depending on the ``message_format`` selects the appropriate method of the ``Python-Telegram-Bot`` library). An important feature of this function is that if the user clicks on the button, then the previous message of the bot is changed, rather than a new one is sent. If, nevertheless, in this case you need to send a new message to the user, then you need to set the parameter ``only_send=True`` ;
 * ``edit_or_send`` - wrapper of the ``send_format_message`` method for sending text messages with buttons;
 * ``send_botmenuelem`` - Sends a ``BotMenuElem`` to the user. The ``update`` argument can be empty;
-* ``task_send_message_handler`` - created for sending messages to many users. Handles situations where the user
-blocked the bot, deleted or when the limit for sending messages to users is reached;
+* ``task_send_message_handler`` - created for sending messages to many users. Handles situations where the user blocked the bot, deleted or when the limit for sending messages to users is reached;
 
 
 Utils
