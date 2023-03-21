@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 import telegram
 import inspect
 
-from telegram.ext import Handler
+from telegram.ext import BaseHandler as Handler
 
 
 def telega_resolve(path, utrl_conf=None):
