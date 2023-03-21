@@ -4,7 +4,7 @@ from telegram import (
     Bot,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
-    ReplyMarkup,
+    # ReplyMarkup,
     KeyboardButton,
 )
 
@@ -35,8 +35,8 @@ class InlineKeyboardButtonDJ(TelegramDjangoObject2Json, InlineKeyboardButton):
     pass
 
 
-class ReplyMarkupDJ(TelegramDjangoObject2Json, ReplyMarkup):
-    pass
+# class ReplyMarkupDJ(TelegramDjangoObject2Json, ReplyMarkup):
+#     pass
 
 
 class KeyboardButtonDJ(TelegramDjangoObject2Json, KeyboardButton):
