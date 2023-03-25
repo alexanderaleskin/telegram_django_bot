@@ -103,12 +103,12 @@ def handler_decor(log_type='F', update_user_info=True):
                 if 'Message is not modified:' in error.message:
                     res = None
                 else:
-                    res = [bot.send_message(user.id, str(ERROR_MESSAGE))]  # should be bot.send_format_message
+                    res = bot.send_message(user.id, str(ERROR_MESSAGE))  # should be bot.send_format_message
                     tb = sys.exc_info()[2]
                     raise_error = error.with_traceback(tb)
             except Exception as error:
 
-                res = [bot.send_message(user.id, str(ERROR_MESSAGE))]  # should be bot.send_format_message
+                res = bot.send_message(user.id, str(ERROR_MESSAGE))  # should be bot.send_format_message
                 tb = sys.exc_info()[2]
                 raise_error = error.with_traceback(tb)
 
