@@ -1,13 +1,12 @@
 from django.contrib import admin
+from telegram_django_bot.admin import Users
 from .models import Category, Entity, User, Size
 from django.db.models import Count, Q
-
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     pass
-
 
 
 @admin.register(Entity)
@@ -21,5 +20,5 @@ class SizeAdmin(admin.ModelAdmin):
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(Users):
     pass
