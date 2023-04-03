@@ -62,7 +62,7 @@ class ActionLogAdmin(CustomModelAdmin):
         if apps.is_installed('rangefilter'):
             from rangefilter.filters import DateRangeFilter
             self.list_filter = (
-                'type',
+                ('type', CustomRelatedOnlyDropdownFilter),
                 ('dttm', DateRangeFilter),
                 ('user', CustomRelatedOnlyDropdownFilter),
             )
@@ -71,7 +71,7 @@ class ActionLogAdmin(CustomModelAdmin):
     list_display = ('id', 'user', 'dttm', 'type')
     search_fields = ('type__startswith',)
     list_filter = (
-        'type',
+        ('type', CustomRelatedOnlyDropdownFilter),
         ('user', CustomRelatedOnlyDropdownFilter),
     )
     raw_id_fields = ('user', )
