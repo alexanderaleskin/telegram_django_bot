@@ -1,5 +1,6 @@
 import csv
 
+from django.apps import apps
 from django.utils.translation import gettext_lazy as _
 from django.http import HttpResponse
 from django.db.models import Count
@@ -13,10 +14,12 @@ class CustomModelAdmin(admin.ModelAdmin):
     def export_as_csv(self, request, queryset):
 
         meta = self.model._meta
+        file_name = str(meta).replace('.', '_')
+
         field_names = [field.name for field in meta.fields]
 
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
+        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(file_name)
         writer = csv.writer(response)
 
         writer.writerow(field_names)
@@ -29,6 +32,16 @@ class CustomModelAdmin(admin.ModelAdmin):
 
 
 class Users(CustomModelAdmin):
+    def __init__(self, model, admin_site) -> None:
+        if apps.is_installed('rangefilter'):
+            from rangefilter.filters import DateRangeFilter
+            self.list_filter = (
+                'is_active',
+                ('date_joined', DateRangeFilter),
+                ('teledeeplink', CustomRelatedOnlyDropdownFilter),
+            )
+        super().__init__(model, admin_site)
+
     list_display = ('id', 'first_name', 'last_name', 'telegram_username')
     search_fields = (
         'first_name__startswith',
@@ -38,19 +51,27 @@ class Users(CustomModelAdmin):
     )
     list_filter = (
         'is_active',
-        'date_joined',
-        ('teledeeplink', CustomRelatedOnlyDropdownFilter)
+        ('teledeeplink', CustomRelatedOnlyDropdownFilter),
     )
     actions = ('export_as_csv',)
 
 
 @admin.register(ActionLog)
 class ActionLogAdmin(CustomModelAdmin):
+    def __init__(self, model, admin_site) -> None:
+        if apps.is_installed('rangefilter'):
+            from rangefilter.filters import DateRangeFilter
+            self.list_filter = (
+                'type',
+                ('dttm', DateRangeFilter),
+                ('user', CustomRelatedOnlyDropdownFilter),
+            )
+        super().__init__(model, admin_site)
+    
     list_display = ('id', 'user', 'dttm', 'type')
     search_fields = ('type__startswith',)
     list_filter = (
         'type',
-        'dttm',
         ('user', CustomRelatedOnlyDropdownFilter),
     )
     raw_id_fields = ('user', )
