@@ -38,6 +38,7 @@ class Users(CustomModelAdmin):
     )
     list_filter = (
         'is_active',
+        'date_joined',
         ('teledeeplink', CustomRelatedOnlyDropdownFilter)
     )
     actions = ('export_as_csv',)

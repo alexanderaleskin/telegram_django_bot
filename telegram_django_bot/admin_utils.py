@@ -1,8 +1,6 @@
-import csv
 from django_admin_listfilter_dropdown.filters import RelatedOnlyDropdownFilter
 from django_json_widget.widgets import JSONEditorWidget
 from django import forms
-from django.http import HttpResponse
 
 
 class CustomRelatedOnlyDropdownFilter(RelatedOnlyDropdownFilter):
@@ -11,7 +9,7 @@ class CustomRelatedOnlyDropdownFilter(RelatedOnlyDropdownFilter):
 
     def field_choices(self, field, request, model_admin):
         pk_qs = model_admin.get_queryset(request).distinct().values_list('%s__pk' % self.field_path, flat=True)
-        return field.get_choices(include_blank=False, limit_choices_to={'pk__in': pk_qs}, ordering=[self.ordering_field,])
+        return field.get_choices(include_blank=True, limit_choices_to={'pk__in': pk_qs}, ordering=[self.ordering_field,])
 
 
 class DefaultOverrideAdminWidgetsForm(forms.ModelForm):
