@@ -29,9 +29,10 @@ class CustomModelAdmin(admin.ModelAdmin):
         return response
 
     export_as_csv.short_description = _("Export Selected")
+    actions = ('export_as_csv',)
 
 
-class Users(CustomModelAdmin):
+class UserAdmin(CustomModelAdmin):
     def __init__(self, model, admin_site) -> None:
         if apps.is_installed('rangefilter'):
             from rangefilter.filters import DateRangeFilter
@@ -51,9 +52,9 @@ class Users(CustomModelAdmin):
     )
     list_filter = (
         'is_active',
+        'date_joined',
         ('teledeeplink', CustomRelatedOnlyDropdownFilter),
     )
-    actions = ('export_as_csv',)
 
 
 @admin.register(ActionLog)
@@ -72,17 +73,16 @@ class ActionLogAdmin(CustomModelAdmin):
     search_fields = ('type__startswith',)
     list_filter = (
         'type',
+        'dttm',
         ('user', CustomRelatedOnlyDropdownFilter),
     )
     raw_id_fields = ('user', )
-    actions = ('export_as_csv',)
 
 
 @admin.register(TeleDeepLink)
 class TeleDeepLinkAdmin(CustomModelAdmin):
     list_display = ('id', 'title', 'price', 'link', 'count_users')
     search_fields = ('title', 'link')
-    actions = ('export_as_csv',)
 
     def get_queryset(self, request):
         qs = super(TeleDeepLinkAdmin, self).get_queryset(request)
@@ -112,7 +112,6 @@ class BotMenuElemAdmin(CustomModelAdmin):
     search_fields = ('command', 'callbacks_db', 'message', 'buttons_db',)
     list_filter = ('is_visable', 'empty_block')
     form = BotMenuElemAdminForm
-    actions = ('export_as_csv',)
 
 
 @admin.register(BotMenuElemAttrText)
@@ -120,8 +119,6 @@ class BotMenuElemAttrTextAdmin(CustomModelAdmin):
     list_display = ('id', 'dttm_added', 'language_code', 'default_text', 'translated_text')
     search_fields = ('default_text', 'translated_text')
     list_filter = ('language_code', 'bot_menu_elem')
-    actions = ('export_as_csv',)
-
 
 
 class TriggerAdminForm(DefaultOverrideAdminWidgetsForm):
@@ -133,11 +130,9 @@ class TriggerAdmin(CustomModelAdmin):
     list_display = ('id', 'name', 'min_duration', 'priority', 'botmenuelem_id')
     search_fields = ('name', 'condition_db')
     form = TriggerAdminForm
-    actions = ('export_as_csv',)
 
 
 @admin.register(UserTrigger)
 class UserTriggerAdmin(CustomModelAdmin):
     list_display = ('id', 'dttm_added', 'trigger_id', 'user_id', 'is_sent')
     list_filter = ('trigger', 'is_sent')
-    actions = ('export_as_csv',)
