@@ -32,7 +32,7 @@ class CustomModelAdmin(admin.ModelAdmin):
     actions = ('export_as_csv',)
 
 
-class UserAdmin(CustomModelAdmin):
+class TelegramUserAdmin(CustomModelAdmin):
     def __init__(self, model, admin_site) -> None:
         if apps.is_installed('rangefilter'):
             from rangefilter.filters import DateRangeFilter

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from telegram_django_bot.admin import UserAdmin as CustomUserAdmin
+from telegram_django_bot.admin import TelegramUserAdmin as CustomUserAdmin
 from .models import Category, Entity, User, Size
 from django.db.models import Count, Q
 
