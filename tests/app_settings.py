@@ -73,6 +73,3 @@ LANGUAGES = [
     ('de', _('German')),
     ('ru', _('Russian'))
 ]
-
-
-

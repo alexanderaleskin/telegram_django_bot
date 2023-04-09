@@ -66,8 +66,6 @@ class Test_TG_DJ_BOT(TD_TestCase):
 
         # todo: add check for all formats
 
-
-
     def test_send_botmenuelem(self):
         bme = BotMenuElem.objects.create(
             message_format=MESSAGE_FORMAT.PHOTO,

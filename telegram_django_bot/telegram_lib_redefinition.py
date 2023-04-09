@@ -44,5 +44,24 @@ class KeyboardButtonDJ(TelegramDjangoObject2Json, KeyboardButton):
 
 
 class BotDJ(TelegramDjangoObject2Json, Bot):
-    pass
+    def _message(
+            self,
+            endpoint: str,
+            data,
+            *args,
+            **kwargs
+    ):
+
+        for field in ['text', 'caption']:
+            if field in data and hasattr(data[field], '__call__'):
+                data[field] = data[field].__call__()
+            elif data.get(field):
+                data[field] = str(data[field])
+
+        return super()._message(
+            endpoint,
+            data,
+            *args,
+            **kwargs
+        )
 
