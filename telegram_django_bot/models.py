@@ -116,7 +116,7 @@ class TelegramUser(AbstractUser):
         abstract = True
 
     def __str__(self):
-        return f"U({self.id} {self.telegram_username} {self.first_name})"
+        return f"U({self.id}, {self.telegram_username or '-'}, {self.first_name or '-'})"
 
     @property
     def current_utrl_form(self):
@@ -202,6 +202,8 @@ class TeleDeepLink(models.Model):
     )])
     users = models.ManyToManyField(settings.AUTH_USER_MODEL)
 
+    def __str__(self):
+        return f'TDL({self.id}, {self.link})'
 
 class ActionLog(models.Model):
     """
@@ -213,7 +215,7 @@ class ActionLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
-        return '({}, {}, {})'.format(self.user_id, self.dttm, self.type)
+        return 'AL({}, {}, {})'.format(self.user_id, self.dttm, self.type)
 
 
 class BotMenuElem(models.Model):
@@ -262,7 +264,7 @@ class BotMenuElem(models.Model):
     )
 
     def __str__(self):
-        return f"BME ({self.id}) - { self.command[:32] if self.command else self.message[:32]}"
+        return f"BME({self.id}, { self.command[:32] if self.command else self.message[:32]})"
 
     def save(self, *args, **kwargs):
         # bot = telegram.Bot(TELEGRAM_TOKEN)
@@ -404,6 +406,9 @@ class Trigger(AbstractActiveModel):
                 raise ValueError(f'unknown format {part}')
 
         return timezone.timedelta(days=days, hours=hours)
+
+    def __str__(self):
+        return f"T({self.id}, {self.name})"
 
 
 class UserTrigger(TelegramAbstractActiveModel):
