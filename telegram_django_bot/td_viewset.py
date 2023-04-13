@@ -245,36 +245,66 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         else:
             return self.generate_message_no_elem(model_or_pk)
 
-    def show_list(self, page=0, per_page=10, columns=1, *args, **kwargs):
-        """show list items"""
+    def show_list(self, page=0, rows=1, columns=2, *args, **kwargs):
+        """
+        show list of model elements with pagination
+        :param page: page to show
+        :param rows: amount of buttons rows
+        :param columns: amount of buttons columns
+        :param args: 
+        :param kwargs: 
+        :return: 
+        """
         page = int(page)
-
         # generate content
         count_models, page_models, first_this_page, first_next_page = self.show_list_get_queryset(
-            page, per_page, columns, *args, **kwargs
+            page, rows, columns, *args, **kwargs
         )
+
+        buttons = []
+        pagination_buttons = []
 
         # generate view of content
         if page_models_amount := len(page_models):
             mess = ''
-            buttons = self.gm_show_list_create_pagination(
+            pagination_buttons = self.gm_show_list_create_pagination(
                 page, count_models, first_this_page, first_next_page, page_models_amount
             )
 
-            for it_m, model in enumerate(page_models, page * per_page * columns + 1):
+            model_buttons = []
+            for it_m, model in enumerate(page_models, page * rows * columns + 1):
                 mess += self.gm_show_list_elem_info(model, it_m)
 
-                buttons += [
-                    [inlinebutt(
-                        text=self.gm_show_list_button_names(it_m, model),
-                        callback_data=self.gm_callback_data('show_elem', model.pk)
-                    )]
-                ]
+                model_buttons.append(inlinebutt(
+                    text=f'{it_m}. {model}',
+                    callback_data=self.gm_callback_data('show_elem', model.pk)
+                ))
+
+            column_buttons = []
+            for key in range(len(model_buttons)):
+                column_buttons.append(model_buttons[key])
+                if (key + 1) % columns == 0:
+                    buttons.append(column_buttons)
+                    column_buttons = []
+            if column_buttons:
+                buttons.append(column_buttons)
+
         else:
             mess = _('There is nothing to show.')
-            buttons = []
 
-        return self.CHAT_ACTION_MESSAGE, (mess, buttons)
+        add_button = inlinebutt(text=_('➕ Add'),
+                                callback_data=self.gm_callback_data('create')
+                                )
+        if pagination_buttons:
+            buttons += [[
+                pagination_buttons[0][0],
+                add_button,
+                pagination_buttons[0][-1],
+            ]]
+        else:
+            buttons += [[add_button]]
+        chat_action_args = (mess, buttons)
+        return self.CHAT_ACTION_MESSAGE, chat_action_args
 
     # help functions for main functions for doing its work.
 
