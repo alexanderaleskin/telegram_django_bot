@@ -84,7 +84,7 @@ class BaseTelegramForm(BaseForm):
         super().__init__(data, files, initial=initial)
         # self.error_class = TelegaErrorList
 
-        self.fields, self.next_field = self._init_helper_fields_detection(data)
+        self.next_field = self._init_helper_fields_detection(data)[1]
 
     def save(self, commit=True):
         """ save temp data to user data"""
@@ -113,6 +113,9 @@ class BaseTelegramForm(BaseForm):
         self._clean_fields()
         self._clean_form()
         self._post_clean()
+
+    def is_valid(self):
+        return self.is_bound
 
 
 class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
@@ -150,7 +153,7 @@ class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
         # self.error_class = TelegaErrorList
 
         self.next_field = None
-        self.fields, self.next_field = self._init_helper_fields_detection(data)
+        self.next_field = self._init_helper_fields_detection(data)[1]
 
     def save(self, commit=True, is_completed=True):
         """
