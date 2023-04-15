@@ -6,10 +6,18 @@ from django.urls import resolve, Resolver404, reverse
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-import telegram
+from telegram import (
+    Update,
+)
 import inspect
 
-from telegram.ext import Handler
+
+try:
+    # version 20.x +
+    from telegram.ext import BaseHandler as Handler
+except ImportError:
+    # old version
+    from telegram.ext import Handler
 
 
 def telega_resolve(path, utrl_conf=None):
@@ -107,7 +115,7 @@ class RouterCallbackMessageCommandHandler(Handler):
         :param update:
         :return:
         """
-        if isinstance(update, telegram.Update) and (update.effective_message or update.callback_query):
+        if isinstance(update, Update) and (update.effective_message or update.callback_query):
             callback = self.get_callback_utrl(update)
             if callback:
                 return True

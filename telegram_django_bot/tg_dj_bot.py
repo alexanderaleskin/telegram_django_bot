@@ -62,7 +62,17 @@ class TG_DJ_Bot(BotDJ):
 
             message_format = MESSAGE_FORMAT.TEXT
             mess = str(ERROR_MESSAGE)
-            logging.warning('Try to find BME, but there is no such models, so the error message shown for the client')
+
+            utrl = ''
+            if update:
+                if update.message:
+                    utrl = update.message.text
+                elif update.callback_query:
+                    utrl = update.callback_query.data
+
+            logging.warning(
+                f'Try to find BME {utrl}, but there is no such models, so the error message shown for the client'
+            )
         else:
             language_code = settings.LANGUAGE_CODE
             if settings.USE_I18N and user.language_code != settings.LANGUAGE_CODE:
@@ -93,7 +103,7 @@ class TG_DJ_Bot(BotDJ):
         if menu_elem and menu_elem.telegram_file_code is None and menu_elem.media and len(media_codes) > 0:
             menu_elem.telegram_file_code = media_codes[0]
             menu_elem.save()
-        return [response]
+        return response
 
     def send_format_message(
             bot,

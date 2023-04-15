@@ -13,7 +13,7 @@ from django.conf import settings
 from test_app.models import User, Category
 from test_app.views import CategoryViewSet, EntityViewSet
 from test_app.handlers import me
-
+import unittest
 
 class TestTelegaResolve(TD_TestCase):
     def test_exist(self):
@@ -62,7 +62,7 @@ class TestTelegaReverse(TD_TestCase):
 
 
 
-
+@unittest.skipIf(int(telegram.__version__.split('.')[0]) >= 20, 'tests do not support async')
 class TestRouterCallbackMessageCommandHandler(TD_TestCase):
     def setUp(self) -> None:
         self.bme = BotMenuElem.objects.create(
@@ -88,7 +88,7 @@ class TestRouterCallbackMessageCommandHandler(TD_TestCase):
         self.assertTrue(rc_mch.check_update(update))
 
         res = rc_mch.handle_update(update, 'dispatcher', 'check_result', self.test_callback_context)
-        self.assertEqual(telegram.Message, type(res[0]))
+        self.assertEqual(telegram.Message, type(res))
 
         rc_mch = RouterCallbackMessageCommandHandler(only_utrl=True)
         self.assertFalse(rc_mch.check_update(update))
@@ -103,7 +103,7 @@ class TestRouterCallbackMessageCommandHandler(TD_TestCase):
         res = rc_mch.handle_update(update, 'dispatcher', 'check_result', self.test_callback_context)
         self.assertEqual(
             'Oops! It seems that an error has occurred, please write to support (contact in bio)!',
-            res[0].text
+            res.text
         )
         self.assertEqual(1, ActionLog.objects.filter(type='/abra').count())
 
@@ -171,7 +171,7 @@ class TestRouterCallbackMessageCommandHandler(TD_TestCase):
 
         res = rc_mch.handle_update(update, 'dispatcher', 'check_result', self.test_callback_context)
         self.assertEqual(1, ActionLog.objects.filter(type='test').count())
-        self.assertEqual(telegram.Message, type(res[0]))
+        self.assertEqual(telegram.Message, type(res))
 
         rc_mch = RouterCallbackMessageCommandHandler(only_utrl=True)
         self.assertFalse(rc_mch.check_update(update))

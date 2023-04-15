@@ -3,6 +3,7 @@ import sys
 from django.utils.translation import gettext_lazy as _
 
 import environ
+
 env = environ.Env()
 environ.Env.read_env()
 
