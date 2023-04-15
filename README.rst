@@ -1,40 +1,11 @@
 Telegram Django Bot Bridge
 ============================
 
-This library provides a Python interface for creating Telegram Bots. It standardizes coding approach in the best
-practice of the web development. The library combines `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_.
-and provides extra powerful utilities based on these libraries.
+This library provides a Python high-level interface for creating Telegram Bots. It standardizes the coding in the best
+practice of the web development. The library is based on `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_.
+and provides viewset interface for managing data with.
 
-
-Normally, Python-Telegram-Bot gives next opportunities for bot creating:
-
-* Python Interface for communication with Telegram API;
-* Web-service to get updates from telegram;
-
-and Django:
-
-* Django ORM  (communication with Database);
-* Administration panel for management.
-
-
-Telegram Django Bot Bridge provides next special opportunities:
-
-* using Django Forms;
-* using Viewsets (typical action with model (create, update, list, delete));
-* using Django localization.
-* using function routing like urls routing in Django.
-
-And some extra useful staff:
-
-* using function routing like urls routing in Django;
-* creating tests;
-* creating general menu items with no-coding (through Django Admin Panel);
-* extra high-level Bot functions, such as wrapper for sending delayed (or scheduled) messages;
-* collecting stats from user actions in the bot;
-* creating user triggers;
-* commonly used utilities.
-
-
+If you start a new project, you could use `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ with preconfigured settings.
 
 Install
 ------------
@@ -46,20 +17,21 @@ You can install via ``pip``:
     $ pip install telegram_django_bot
 
 
-Then you can configurate it in your app:
+Then you can configure it in your app:
 
 
 1. Add "telegram_django_bot" to your INSTALLED_APPS setting like this:
 
 .. code-block:: python
-    
-    DJANGO_ALLOW_ASYNC_UNSAFE = True # DB writings will fail without it
+
     INSTALLED_APPS = [
         ...
         'telegram_django_bot',
         'django_json_widget', # needed for django admin site
     ]
 
+
+If you are planning to use Django in asynchronous mode, then you need to set ``DJANGO_ALLOW_ASYNC_UNSAFE = True`` (otherwise DB writings will be failed).
 
 
 2. Run ``python manage.py migrate`` to create the telegram_django_bot models (checked that the ``AUTH_USER_MODEL`` selected
@@ -81,30 +53,64 @@ in settings).
 
 .. code-block:: python
 
+    updater = Updater(bot=TG_DJ_Bot(settings.TELEGRAM_TOKEN))
+    updater.dispatcher.add_handler(RouterCallbackMessageCommandHandler())
+
+or in 20.x version :
+
+.. code-block:: python
+
     bot = TG_DJ_Bot(settings.TELEGRAM_TOKEN)
     application = ApplicationBuilder().bot(bot).build()
     application.add_handler(RouterCallbackMessageCommandHandler())
+
     
 
-If you start a new project, you could use `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ with preconfigured settings.
 
 
 Quick start
 ------------
 
 
+Normally, Python-Telegram-Bot gives the next opportunities for bot creation:
 
-The key feature of the lib is ``TelegramViewSet`` - class for manage Django ORM model. It is designed in the
+* Python Interface for communication with Telegram API;
+* Web service to get updates from telegram;
+
+and Django:
+
+* Django ORM  (communication with Database);
+* Administration panel for management.
+
+
+Telegram Django Bot Bridge provides next special opportunities:
+
+* using Viewsets (typical action with model (create, update, list, delete));
+* using Django localization.
+* using function routing like urls routing in Django.
+
+And some extra useful staff:
+
+* creating general menu items with no-coding (through Django Admin Panel);
+* extra high-level Bot functions, such as a wrapper for sending delayed (or scheduled) messages;
+* creating tests;
+* collecting stats from user actions in the bot;
+.. * creating user triggers;
+* commonly used utilities.
+
+
+
+The key feature of the lib is ``TelegramViewSet`` - a class for managing Django ORM model. It is designed in a
 similar way as `Django rest framework Viewset <https://www.django-rest-framework.org/api-guide/viewsets/>`_ , but has
-a significant difference: while DRF Viewset provides response in serializable format (usually in json format) to frontend app, TelegaViewSet
-provides response to user in telegram interface in message format with buttons. So, you will manage data and receive
-response in human format by executing TelegaViewSet method. The methods use some kind of templates for generating human
-response (it is possible to overwrite these templates). By default, TelegaViewSet has 5 methods:
+a significant difference: while DRF Viewset provides a response in serializable format (usually in json format) to frontend app, TelegaViewSet
+provides a response to the user in telegram interface in message format with buttons. So, you will manage data and receive
+responses in human format by executing TelegaViewSet method. The methods use some kind of templates for generating human
+responses (it is possible to overwrite these templates). By default, TelegaViewSet has 5 methods:
 
-* ``create`` - create a new instance of specified ORM model;
+* ``create`` - create a new instance of the specified ORM model;
 * ``change`` - update instance fields of specified ORM model;
-* ``show_elem`` - show fields of the instance and buttons with actions of this instance;
-* ``show_list`` - show list of model instance (with pagination);
+* ``show_elem`` - show fields of the element and buttons with actions of this instance;
+* ``show_list`` - show list of model elements (with pagination);
 * ``delete`` - delete the instance
 
 
@@ -121,7 +127,7 @@ So, if, for example, you have a model of some *request* in your project:
         tags = models.ManyToManyField('Tags')
 
 
-The next piece of code gives opportunity for full managing (create, update, show, delete) of this model from Telegram:
+The next piece of code gives the opportunity for full managing (create, update, show, delete) of this model from Telegram:
 
 .. code-block:: python
 
@@ -141,11 +147,11 @@ The next piece of code gives opportunity for full managing (create, update, show
         viewset_name = 'Request'
 
 
-If you need, you can add extra actions to RequestViewSet for managing (see details information below) or change existed functions.
+If you need, you can add extra actions to RequestViewSet for managing (see details information below) or change existing functions.
 There are several parameters and secondary functions in TelegaViewSet for customizing logic if it is necessary.
 
 In this example, ``TelegaModelForm`` was used. TelegaModelForm is a descendant of Django ModelForm. So, you could use
-labels, clean and other parameters and functions for managing logic and displaying.
+labels, clean functions and other parameters and functions for managing logic and displaying.
 
 
 TelegaViewSet is designed to answer next user actions: clicking buttons and sometimes sending messages. The library imposes
@@ -182,8 +188,12 @@ Deep in details
 
 In this chapter, we will analyze how everything works. The main task of the library is to unify the code and
 provide frequently used functions for developing a bot, that is why a lot of logic is based on resources and paradigms
-Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_ . Let's analyze
+of Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_ . Let's analyze
 key features of the library on the example of `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ .
+
+.. important::
+
+    The template is based on 13.x Python-Telegram-Bot version (synchronous version). So, the next examples is suitable for that version. For use with 20.x versions you need to do some modification.
 
 
 Since Telegram bots are designed as a tool for responding to user requests, writing a bot begins
@@ -192,24 +202,15 @@ from the user request handler. For this, the standard tools of the Python-Telegr
 
 .. code-block:: python
 
-     from telegram.ext import ApplicationBuilder
-     from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
-     from telegram_django_bot.tg_dj_bot import TG_DJ_Bot
-     import os
-
-     ...
-     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'traficarius.settings')
-     os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
-     django.setup()
-     ...
+     from telegram.ext import Updater
 
      def main():
          ...
 
-        bot = TG_DJ_Bot(TELEGRAM_TOKEN)
-        application = ApplicationBuilder().bot(bot).build()
-        application.add_handler(RouterCallbackMessageCommandHandler())
-        application.run_polling()
+         updater = Updater(bot=TG_DJ_Bot(TELEGRAM_TOKEN))
+         add_handlers(updater)
+         updater.start_polling()
+         updater.idle()
 
      if __name__ == '__main__':
          main()
@@ -220,6 +221,21 @@ As indicated in the example, to run the bot (Update) you need to specify a few t
 1. an instance of the ``telegram.Bot`` model with the specified API token. In this case, a descendant ``telegram_django_bot.tg_dj_bot.TG_DJ_Bot``
 of the ``telegram.Bot`` class is used. It has additional functionality for convenience (we will return to it later);
 2. Handlers that will be called in response to user requests.
+
+In the example, the list of handlers is specified in the ``add_handlers`` function:
+
+
+
+.. code-block:: python
+
+     from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
+
+     ...
+
+     def add_handlers(updater: Updater):
+         dp=updater.dispatcher
+         dp.add_handler(RouterCallbackMessageCommandHandler())
+
 
 The example adds 1 super handler ``RouterCallbackMessageCommandHandler``, which allows you to write handlers
 in the style of handling link requests in the same way as it is done in ``Django``. ``RouterCallbackMessageCommandHandler`` allows you to handle
@@ -308,7 +324,7 @@ show_list  sl       Display a list of models
 ========= ======== ===========================
 
 Thus, if we want to call the ``BotMenuElemViewSet.create`` method to create an element, we need to use
-path 'sb/cr', where by the first part of path 'sb/'  the router ``RouterCallbackMessageCommandHandler`` will execute
+path 'sb/cr', whereby the first part of the path 'sb/'  the router ``RouterCallbackMessageCommandHandler`` will execute
 the ``BotMenuElemViewSet`` class, namely the ``TelegaViewSet.dispatch`` method, which in turn will call  the ``create`` method by analyzing the second part of the path
 ``cr``.
 
@@ -325,7 +341,7 @@ TelegramViewSet features
 
 As described above, TelegaViewSet contains standard functions for data manipulation.
 Due to such standard data processing methods, it turns out in the example to describe the logic of ``BotMenuElemViewSet`` in 40
-lines of code, also using some customization for a beautiful data displaying.
+lines of code, also using some customization for beautiful data displaying.
 
 
 To use all the features of the TelegaViewSet in your class, it should be inherited from it, as, for example, this is done
@@ -399,7 +415,7 @@ in the modification of the method of filling in the form fields, otherwise they 
 
 
 ``TelegaViewSet`` is designed to interact with descendants of the ``TelegaModelForm`` class and allows you to use
-generate forms with different fields, such as ``CharField, IntegerField`` or ``ForeignKey, ManyToManyField``. Also, it is good idea
+generate forms with different fields, such as ``CharField, IntegerField`` or ``ForeignKey, ManyToManyField``. Also, it is a good idea
 to use the ``prechoice_fields_values`` dictionary in ``TelegaViewSet`` descendants for improving the convenience of filling out forms for users.
 It is possible to store a list of frequently used values of form fields in the ``prechoice_fields_values``.
 This allows users to select the desired values by clicking buttons rather than
@@ -469,23 +485,23 @@ the determination of the current routing path is occurred. It is determined eith
 can be stored in the user attribute ``user.current_utrl``. The second option is possible if the user manually enters
 some information (for example, filled in a text field of form). After that, the arguments are extracted from the path
 to call a specific function. Storing and interacting with arguments in a path is similar to how ``sys.argv`` works. So,
-for example, the string ``"sl&1&20"`` will be converted to the list ``['sl', '1', '20']``. Separator character between attributes
+for example, the string ``"sl&1&20"`` will be converted to the list ``['sl', '1', '20']``. The separator character between attributes
 is ``&`` by default and can be changed via the ``TelegaViewSet.ARGS_SEPARATOR_SYMBOL`` variable.
 
 When using ``TelegaViewSet`` you most likely won't have to interact with the argument string directly, since
-how ``dispatch`` converts a string into arguments, and to create a string for a ``callback_data`` button for calling another method by user, you should use
+``dispatch`` converts a string into arguments. And for creating a ``callback_data`` button string, that the user can call another method from Telegram interface, you should use
 ``TelegaViewSet.gm_callback_data`` function. In case you need more low-level interaction with function arguments, then
 you can use the ``construct_utrl`` and ``get_utrl_params`` functions.
 
 After receiving the utrl_args arguments and checking access rights, the managing method (action) is directly selected and called.
 The first argument, which is the short name for the function, is popped from the utrl_args. All other arguments are passed as parameters
-into a function. Inside the function, the necessary business logic and the data formating for displaying to the user as a response take place.
+into a function. Inside the function, the necessary business logic and the data formatting for displaying to the user as a response take place.
 Any such managing function in the ``TelegaViewSet`` class must return the action type ``chat_action`` and the parameters to that action ``chat_action_args``.
-By default, the  class has only 1 action ﹣ ``CHAT_ACTION_MESSAGE``, which means that the user will receive
-a text message (possibly with buttons) as an answer for his/her action. The arguments to this action are the text of the message and a list of buttons (can be None).
+By default, the class has only 1 action ﹣ ``CHAT_ACTION_MESSAGE``, which means that the user will receive
+a text message (possibly with buttons) as an answer for his/her action. The arguments for this action are the text of the message and a list of buttons (can be None).
 
 
-After the function is processed, a response is sent to the user  by ``send_answer`` function and the user's action is logged.
+After the function is processed, a response is sent to the user by ``send_answer`` function and the user's action is logged.
 
 
 The methods to call in ``viewset_routing`` are the ``create, update, delete, show_elem, show_list`` methods.
@@ -532,10 +548,10 @@ This section describes the following class functionality that makes it easier to
 External filters
 +++++++++++++++++++++
 
-Quite often, there is situation when you need to work not with all the elements of a database table, but with some
+Quite often, there is a situation when you need to work not with all the elements of a database table, but with some
 group (for example, a group of elements with a specific foreign key). For such purposes, you should use the ``foreign_filters`` list,
 which stores the values for filtering when the method is called. How exactly to use these filters is up to you, but
-usually it is good idea to use it in the ``get_queryset`` function. Thus, it is possible to pass to functions
+usually it is a good idea to use it in the ``get_queryset`` function. Thus, it is possible to pass to functions
 additional arguments that do not break the key logic of standard functions. Using the template example, you can modify
 ``BotMenuElemViewSet`` so that if an additional parameter is specified, then the BotMenuElem list displays
 only those elements that contain the specified parameter in their ``command`` attribute. To do this, you need to make the following changes to the code:
@@ -610,7 +626,7 @@ Helper functions of business logic
 
 The ``TelegramViewSet`` class uses the following helper functions:
 
-* ``def get_queryset`` - allows you to modify Model queries to database (most often used to filter elements, as in the example above);
+* ``def get_queryset`` - allows you to modify Model queries to the database (most often used to filter elements, as in the example above);
 * ``def create_or_update_helper`` - main logic for ``create`` and ``update`` methods;
 * ``def show_list_get_queryset`` - allows you to customize the selection of items to display in show_list;
 
@@ -637,10 +653,10 @@ To support the use of different languages, the main elements of the Python-Teleg
 
 
 1. ``telegram.Bot`` -> ``telegram_django_bot.BotDJ`` ;
-2. ``telegram.KeyboardButton`` -> ``telegram_django_bot.KeyboardButtonDJ`` ;
-3. ``telegram.InlineKeyboardButton`` -> ``telegram_django_bot.InlineKeyboardButtonDJ`` ;
-4. ``telegram.InlineKeyboardMarkup`` -> ``telegram_django_bot.InlineKeyboardMarkupDJ``;
-
+2. ``telegram.ReplyMarkup`` -> ``telegram_django_bot.ReplyMarkupDJ`` ;
+3. ``telegram.KeyboardButton`` -> ``telegram_django_bot.KeyboardButtonDJ`` ;
+4. ``telegram.InlineKeyboardButton`` -> ``telegram_django_bot.InlineKeyboardButtonDJ`` ;
+5. ``telegram.InlineKeyboardMarkup`` -> ``telegram_django_bot.InlineKeyboardMarkupDJ``.
 
 
 When using these classes in code, multilingual support comes down to the following steps:
@@ -650,7 +666,7 @@ When using these classes in code, multilingual support comes down to the followi
 2. Run command ``$ django-admin makemessages -a`` to generate texts for translation (created in locale folder)
 3. Generation of translation files ``$ django-admin compilemessages``.
 
-Only a part of the functions uses localization in the template. It is made for easy understanding. Usage of localization can be seen in the example
+Only a part of the functions uses localization in the template. It is made for easy understanding. The usage of localization can be seen in the example
 functions ``some_debug_func``.
 
 
@@ -663,14 +679,14 @@ The library provides some additional tools for the convenience of developing and
 ************************************
 
 
-For the correct work of ``TelegaViewSet`` and other components the Django ORM model representing the user in the Telegram must be inherited
+For the correct work of ``TelegaViewSet`` and other components the Django ORM model representing the user in Telegram must be inherited
 from ``telegram_django_bot.models.TelegramUser``, as these components use its fields. ``TelegramUser`` inherited from
 ``django.contrib.auth.models.AbstractUser`` (which allows you to authorize users on the site if necessary) and has
 the following additional fields:
 
 * ``id`` - redefined to use user ID from telegrams;
 * ``seed_code`` - arbitrary value from 1 to 100 to randomly group users for tests and analysis;
-* ``telegram_username`` - username of the user in the telegram;
+* ``telegram_username`` - username of the user in telegram;
 * ``telegram_language_code`` - telegram language code (some languages have dialects and as a result the code designation is more than 2 symbols);
 * ``timezone`` - the user's time zone (for determining the time);
 * ``current_utrl`` - path (utrl) of the last user action (used in ``TelegaViewSet``);
@@ -689,7 +705,7 @@ when writing code. The model also has the following methods (property) to simpli
 * ``language_code`` (property) - returns the language code in which messages should be generated for the user;
 
 
-Actually, if you want, you can create your self Django ORM model representing the user, you just need to copy
+If you want, you can create your self Django ORM model representing the user, you just need to copy
 ``id, telegram_username, telegram_language_code, current_utrl, current_utrl_code_dttm, current_utrl_context_db, current_utrl_form_db``
 and corresponding functions.
 
@@ -709,7 +725,7 @@ Additional functions of TG_DJ_Bot
 
 To improve convenience, ``TG_DJ_Bot`` has several high-level functions:
 
-* ``send_format_message`` - Allows you to send a message of an arbitrary type (internally, depending on the ``message_format`` selects the appropriate method of the ``Python-Telegram-Bot`` library). An important feature of this function is that if the user clicks on the button, then the previous message of the bot is changed, rather than a new one is sent. If, nevertheless, in this case you need to send a new message to the user, then you need to set the parameter ``only_send=True`` ;
+* ``send_format_message`` - Allows you to send a message of an arbitrary type (internally, depending on the ``message_format`` selects the appropriate method of the ``Python-Telegram-Bot`` library). An important feature of this function is that if the user clicks on the button, then the previous message of the bot is changed, rather than a new one being sent. If, nevertheless you need to send a new message to the user, then you need to set the parameter ``only_send=True`` ;
 * ``edit_or_send`` - wrapper of the ``send_format_message`` method for sending text messages with buttons;
 * ``send_botmenuelem`` - Sends a ``BotMenuElem`` to the user. The ``update`` argument can be empty;
 * ``task_send_message_handler`` - created for sending messages to many users. Handles situations where the user blocked the bot, deleted or when the limit for sending messages to users is reached;
@@ -739,7 +755,7 @@ no suitable path was found in the description of utrls (paths in Django notation
 match is found, the ``BotMenuElem`` is considered to be configured incorrectly and an error message is returned to the user.
 You can create a class with the ``only_utrl=True`` attribute, what is disable calls to ``BotMenuElem``.
 
-The example template contains the use of the ``telega_reverse`` function, the essence of which is to generate a path (string) to
+The example template contains the use of the ``telega_reverse`` function, the essence of which is to generate a path (string) to the
 handler specified in the function argument. The function is analogous to the `reverse <https://docs.djangoproject.com/en/4.1/ref/urlresolvers/#reverse>`_ Django function
 and avoids errors when changing paths.
 
@@ -751,12 +767,12 @@ Tests
 The library also extends the ``django.test.TestCase`` capabilities for use with Telegram through the ``TD_TestCase`` class.
 
 The simplest approach for testing the bot is to generate messages that the bot expects from Telegram and
-sending a response to Telegram (to check that the bot's response messages are in the correct format). Class ``TD_TestCase``
+send a response to Telegram (to check that the bot's response messages are in the correct format). Class ``TD_TestCase``
 has a function ``create_update`` for easy and fast creation of ``Telegram.Update`` which generates the request
 telegram user. So the overall design looks like this:
 
 1. A ``Telegram.Update`` is created for emitting a user request;
-2. The ``handle_update`` lambda function, which uses ``RouterCallbackMessageCommandHandler``,  is called with created update. It does its staff and as a result sends a real message to the test user. Due to this, the correctness of the responsing data format  is checked by Telegram;
+2. The ``handle_update`` lambda function, which uses ``RouterCallbackMessageCommandHandler``,  is called with created update. It does its staff and as a result sends a real message to the test user. Due to this, the correctness of the response data format  is checked by Telegram;
 3. The correctness of the sent data and changes in the database is checked using the standard tools ``django.test.TestCase``.
 
 You need to specify at least one test user ID in the ``TELEGRAM_TEST_USER_IDS`` settings section for correct tests work.
