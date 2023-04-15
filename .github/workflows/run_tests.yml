@@ -1,0 +1,37 @@
+name: run_tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        python-version: ['3.9', '3.11']
+        ptb-version: ['13.14', '13.15', '20.2']
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install Dependencies
+      run: |
+        pwd
+        cd tests
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install python-telegram-bot==${{ matrix.ptb-version }}
+    - name: Run Tests
+      run: |
+        pwd
+        cd tests
+        TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} TELEGRAM_TEST_USER_IDS=${{ vars.TELEGRAM_TEST_USER_IDS }} python manage.py test
