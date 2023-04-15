@@ -95,7 +95,6 @@ And some extra useful staff:
 * extra high-level Bot functions, such as a wrapper for sending delayed (or scheduled) messages;
 * creating tests;
 * collecting stats from user actions in the bot;
-.. * creating user triggers;
 * commonly used utilities.
 
 
