@@ -25,13 +25,11 @@ jobs:
         cache: 'pip'
     - name: Install Dependencies
       run: |
-        pwd
         cd tests
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install python-telegram-bot==${{ matrix.ptb-version }}
     - name: Run Tests
       run: |
-        pwd
         cd tests
         TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} TELEGRAM_TEST_USER_IDS=${{ vars.TELEGRAM_TEST_USER_IDS }} python manage.py test
