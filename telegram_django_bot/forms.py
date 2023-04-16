@@ -115,7 +115,13 @@ class BaseTelegramForm(BaseForm):
         self._post_clean()
 
     def is_valid(self):
-        return self.is_bound
+        for field in list(iter(self.errors)):
+            for error in self.errors[field].data:
+                if error.code == 'required':
+                    self.errors[field].data.remove(error)
+            if not self.errors[field]:
+                self.errors.pop(field)
+        return self.is_bound and not self.errors
 
 
 class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
