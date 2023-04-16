@@ -170,6 +170,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 self.update,
                 message,
                 buttons,
+                **kwargs
             )
         else:
             raise ValueError(f'unknown chat_action {chat_reply_action} {utrl}, {self.user}')
@@ -195,19 +196,19 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         :return:
         """
 
-        model = self._get_elem(model_or_pk)
+        model = self.get_orm_model(model_or_pk)
 
         self.user.clear_status(commit=True)
 
         if model:
             return self.create_or_update_helper(field, value, func_response='change', instance=model)
         else:
-            return self.generate_message_no_elem(model_or_pk)
+            return self.gm_no_elem(model_or_pk)
 
     def delete(self, model_or_pk, is_confirmed=False):
         """delete item"""
-
-        model = self._get_elem(model_or_pk)
+        is_confirmed = bool(is_confirmed)
+        model = self.get_orm_model(model_or_pk)
 
         if model:
             if self.deleting_with_confirm and not is_confirmed:
@@ -220,7 +221,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
-            return self.generate_message_no_elem(model_or_pk)
+            return self.gm_no_elem(model_or_pk)
 
     def show_elem(self, model_or_pk, mess=''):
         """
@@ -243,19 +244,21 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
-            return self.generate_message_no_elem(model_or_pk)
+            return self.gm_no_elem(model_or_pk)
 
-    def show_list(self, page=0, rows=1, columns=2, *args, **kwargs):
+    def show_list(self, page=0, rows=5, columns=2, *args, **kwargs):
         """
         show list of model elements with pagination
         :param page: page to show
         :param rows: amount of buttons rows
         :param columns: amount of buttons columns
-        :param args: 
-        :param kwargs: 
-        :return: 
+        :param args:
+        :param kwargs:
+        :return:
         """
         page = int(page)
+        rows = int(rows)
+        columns = int(columns)
         # generate content
         count_models, page_models, first_this_page, first_next_page = self.show_list_get_queryset(
             page, rows, columns, *args, **kwargs
@@ -335,6 +338,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 else:
                     field_value = value
             elif self.update.message:
+                # TODO: handle other types of messages
                 field_value = self.update.message.text
 
             if not field_value is None:
@@ -342,7 +346,6 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
         # some prepare work
         want_1more_variant_for_multichoice &= is_multichoice_field  # and len(data.get('field', []))
-
         form_kwargs = {
             'user': self.user,
             'data': data,
@@ -357,10 +360,10 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
         # show message or change data in backend...
         if want_write_self_variant:
-            res = self.generate_message_self_variant(field, func_response=func_response, instance_id=instance_id)
+            res = self.gm_self_variant(field, func_response=func_response, instance_id=instance_id)
         else:
             if not form.is_valid():
-                res = self.generate_message_value_error(
+                res = self.gm_value_error(
                     field or list(form.fields.keys())[-1],
                     form.errors, func_response=func_response, instance_id=instance_id
                 )
@@ -370,21 +373,21 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                     form.save(is_completed=not want_1more_variant_for_multichoice)
 
                 if want_1more_variant_for_multichoice or show_field_variants_for_update:
-                    res = self.generate_message_next_field(
+                    res = self.gm_next_field(
                         field,
                         func_response=func_response,
                         instance_id=instance_id
                     )
 
                 elif form.next_field:
-                    res = self.generate_message_next_field(
+                    res = self.gm_next_field(
                         form.next_field,
                         func_response=func_response,
                         instance_id=instance_id
                     )
                 else:
                     if func_response == 'create':
-                        res = self.generate_message_success_created(self.form.instance)
+                        res = self.gm_success_created(self.form.instance)
                     else:
                         res = self.show_elem(self.form.instance, _('The field has been updated!\n\n'))
         return res
@@ -425,11 +428,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                     raw_elems.append(
                         inlinebutt(
                             text=f'🔄 {self.telega_form.base_fields[field].label}',
-                            callback_data=self.generate_message_callback_data(
-                                self.command_routings['command_routing_change'],
-                                model.id,
-                                field,
-                            )
+                            callback_data=self.gm_callback_data('change', model.id, field)
                         )
                     )
 
@@ -440,10 +439,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             buttons.append(
                 [inlinebutt(
                     text=_('❌ Delete #%(model_id)s') % {'model_id': model.id},
-                    callback_data=self.generate_message_callback_data(
-                        self.command_routings['command_routing_delete'],
-                        model.id,
-                    )
+                    callback_data=self.gm_callback_data('delete', model.id)
                 )]
             )
 
@@ -451,9 +447,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             buttons.append(
                 [inlinebutt(
                     text=_('🔙 Return to list'),
-                    callback_data=self.generate_message_callback_data(
-                        self.command_routings['command_routing_show_list'],
-                    )
+                    callback_data=self.gm_callback_data('show_list')
                 )]
             )
         return buttons
@@ -472,7 +466,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         mess = ''
         for field_name, field in self.telega_form.base_fields.items():
             if type(field.widget) != HiddenInput:
-                mess += f'<b>{field.label}</b>: {self.gm_value_str(model, field, field_name)}\n'
+                mess += f'<pre><b>{field.label}</b>: {self.gm_value_str(model, field, field_name)}</pre>\n'
 
         return mess
 
@@ -500,8 +494,8 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
     def gm_show_list_elem_info(self, model, it_m:int) -> str:
         mess = f'{it_m}. {self.viewset_name} #{model.pk}\n' if self.use_name_and_id_in_elem_showing else f'{it_m}. '
-        mess += self.generate_show_fields(model)
-        mess += '\n\n'
+        mess += self.gm_show_elem_or_list_fields(model)
+        mess += '\n'
         return mess
 
     def gm_show_list_button_names(self, it_m, model):
@@ -517,15 +511,11 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
     ) -> []:
         prev_page_button = inlinebutt(
             text=f'◀️️️',
-            callback_data=self.generate_message_callback_data(
-                self.command_routings['command_routing_show_list'], str(page - 1),
-            )
+            callback_data=self.gm_callback_data('show_list', str(page - 1))
         )
         next_page_button = inlinebutt(
             text=f'️▶️️',
-            callback_data=self.generate_message_callback_data(
-                self.command_routings['command_routing_show_list'], str(page + 1),
-            )
+            callback_data=self.gm_callback_data('show_list', str(page + 1))
         )
 
         buttons = []
@@ -597,18 +587,14 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             buttons = []
             field = self.telega_form.base_fields[next_field]
 
-            mess += self.show_texts_dict['generate_message_next_field'] % {'label': field.label}
+            mess += str(self.show_texts_dict['generate_message_next_field']) % {'label': field.label}
             if field.help_text:
                 mess += f'{field.help_text}\n\n'
 
             if instance_id:
-                callback_path = lambda x: self.generate_message_callback_data(
-                    self.command_routings[f'command_routing_{func_response}'], instance_id, next_field, x
-                )
+                callback_path = lambda x: self.gm_callback_data(func_response, instance_id, next_field, x)
             else:
-                callback_path = lambda x: self.generate_message_callback_data(
-                    self.command_routings[f'command_routing_{func_response}'], next_field, x
-                )
+                callback_path = lambda x: self.gm_callback_data(func_response, next_field, x)
             # todo: add beautiful text view
 
             choices = self.prechoice_fields_values.get(next_field) or \
@@ -631,7 +617,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                         else:
                             selected_variants = field_value
 
-            buttons += self.generate_message_next_field_choice_buttons(
+            buttons += self.gm_next_field_choice_buttons(
                 next_field, func_response, choices, selected_variants, callback_path
             )
 
@@ -641,7 +627,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             # if not self.telega_form.base_fields[next_field].required:
             #     buttons.append([
             #         inlinebutt(
-            #             text=self.show_texts_dict['leave_blank_button_text'],
+            #             text=str(self.show_texts_dict['leave_blank_button_text']),
             #             callback_data=callback_path(self.NONE_VARIANT_SYMBOLS)
             #         )
             #     ])
@@ -651,19 +637,16 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             elif self.show_cancel_updating_button and instance_id and 'show_elem' in self.actions:
                 buttons.append([inlinebutt(
                     text=_('⬅️ Go back'),
-                    callback_data=self.generate_message_callback_data(
-                        self.command_routings[f'command_routing_show_elem'],
-                        instance_id
-                    )
+                    callback_data=self.gm_callback_data('show_elem', instance_id)
                 )])
 
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
-            return self.generate_message_self_variant(next_field, mess, func_response=func_response, instance_id=instance_id)
+            return self.gm_self_variant(next_field, mess, func_response=func_response, instance_id=instance_id)
 
     def gm_success_created(self, model_or_pk=None, mess=''):
 
-        mess += self.show_texts_dict['generate_message_success_created'] % {'viewset_name': self.viewset_name}
+        mess += str(self.show_texts_dict['generate_message_success_created']) % {'viewset_name': self.viewset_name}
 
         if model_or_pk:
             return self.show_elem(model_or_pk, mess)
@@ -671,30 +654,23 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
     def gm_value_error(self, field_name, errors, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
-        mess += self.show_texts_dict['generate_message_value_error'] % {'label': field.label, 'errors': errors}
+        mess += str(self.show_texts_dict['generate_message_value_error']) % {'label': field.label, 'errors': errors}
 
         # error could be only in self_variant?
-        return self.generate_message_self_variant(field_name, mess, func_response=func_response, instance_id=instance_id)
+        return self.gm_self_variant(field_name, mess, func_response=func_response, instance_id=instance_id)
 
     def gm_self_variant(self, field_name, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
 
-        mess += self.show_texts_dict['generate_message_self_variant'] % {'label': field.label}
+        mess += str(self.show_texts_dict['generate_message_self_variant']) % {'label': field.label}
 
         if field.help_text:
             mess += f'{field.help_text}\n\n'
 
         if instance_id:
-            current_utrl = self.generate_message_callback_data(
-                self.command_routings[f'command_routing_{func_response}'],
-                instance_id,
-                field_name
-            )
+            current_utrl = self.gm_callback_data(func_response, instance_id, field_name)
         else:
-            current_utrl = self.generate_message_callback_data(
-                self.command_routings[f'command_routing_{func_response}'],
-                field_name
-            )
+            current_utrl = self.gm_callback_data(func_response, field_name)
 
         self.user.current_utrl = current_utrl
         self.user.save()
@@ -710,7 +686,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
             buttons.append([
                 inlinebutt(
-                    text=self.show_texts_dict['leave_blank_button_text'],
+                    text=str(self.show_texts_dict['leave_blank_button_text']),
                     callback_data=self.gm_callback_data(*button_args)
                 )
             ])
@@ -721,77 +697,52 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         elif self.show_cancel_updating_button and instance_id and 'show_elem' in self.actions:
             buttons.append([inlinebutt(
                 text=_('⬅️ Go back'),
-                callback_data=self.generate_message_callback_data(
-                    self.command_routings[f'command_routing_show_elem'],
-                    instance_id
-                )
+                callback_data=self.gm_callback_data('show_elem', instance_id)
             )])
         return self.CHAT_ACTION_MESSAGE, (mess, buttons)
 
     def gm_no_elem(self, model_id):
-        mess = self.show_texts_dict['generate_message_no_elem'] % {
+        mess = str(self.show_texts_dict['generate_message_no_elem']) % {
             'viewset_name': self.viewset_name,
             'model_id': model_id,
         }
         return self.CHAT_ACTION_MESSAGE, (mess, [])
 
     def gm_delete_getting_confirmation(self, model):
-        mess = self.show_texts_dict['confirm_deleting'] % {
+        mess = str(self.show_texts_dict['confirm_deleting']) % {
             'viewset_name': self.viewset_name,
-            'model_id': f'#{model.id}' or '',
+            'model_id': f'#{model.pk}' or '',
         }
         buttons = [
             [inlinebutt(
-                text=self.show_texts_dict['confirm_delete_button_text'],
-                callback_data=self.gm_callback_data(
-                    'delete',
-                    model.id,
-                    '1'  # True
-                )
+                text= str(self.show_texts_dict['confirm_delete_button_text']),
+                callback_data=self.gm_callback_data('delete', model.id, '1')
             )]
         ]
         if 'show_elem' in self.actions:
             buttons += [
                 [inlinebutt(
                     text=_('🔙 Back'),
-                    callback_data=self.gm_callback_data(
-                        'show_elem',
-                        model.id,
-                    )
+                    callback_data=self.gm_callback_data('show_elem', model.pk)
                 )]
             ]
         return mess, buttons
 
     def gm_delete_successfully(self, model):
-        mess = self.show_texts_dict['succesfully_deleted'] % {
+        mess = str(self.show_texts_dict['succesfully_deleted'] % {
             'viewset_name': self.viewset_name,
-            'model_id': f'#{model.id}' or '',
-        }
+            'model_id': f'"{model}"' if model else '',
+        })
 
         buttons = []
         if 'show_list' in self.actions:
             buttons += [
                 [inlinebutt(
                     text=_('🔙 Return to list'),
-                    callback_data=self.generate_message_callback_data(
-                        self.command_routings['command_routing_show_list'],
-                    )
+                    callback_data=self.gm_callback_data('show_list')
                 )]
             ]
         return mess, buttons
-
-    # for supporting legacy
-    _get_elem = get_orm_model
-    generate_message_no_elem = gm_no_elem
-    generate_message_self_variant = gm_self_variant
-    generate_message_value_error = gm_value_error
-    generate_message_success_created = gm_success_created
-    generate_message_next_field = gm_next_field
-    generate_message_next_field_choice_buttons = gm_next_field_choice_buttons
-    generate_elem_buttons = gm_show_elem_create_buttons
-    generate_show_fields = gm_show_elem_or_list_fields
-    generate_value_str = gm_value_str
-
 
 TelegaViewSet = TelegramViewSet  # for legacy
 
