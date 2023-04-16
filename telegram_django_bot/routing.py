@@ -10,6 +10,7 @@ import telegram
 import inspect
 
 from telegram.ext import BaseHandler as Handler
+from telegram import Update
 
 
 def telega_resolve(path, utrl_conf=None):
@@ -82,74 +83,40 @@ class RouterCallbackMessageCommandHandler(Handler):
         self.only_utrl = only_utrl # without BME elems
 
     def get_callback_utrl(self, update):
-        callback_func = None
-        # check if utrls
         if update.callback_query:
-            callback_func = telega_resolve(update.callback_query.data, self.utrl_conf)
-        elif update.message and update.message.text and update.message.text[0] == '/':  # is it ok? seems message couldnt be an url
-            callback_func = telega_resolve(update.message.text, self.utrl_conf)
+            return telega_resolve(update.callback_query.data, self.utrl_conf)
+        else:
+            user_details = update.effective_message.from_user
+            user = get_user_model().objects.filter(id=user_details.id).first()
+            if user:
+                logging.info(f'user.current_utrl {user.current_utrl}')
+                if user.current_utrl:
+                    return telega_resolve(user.current_utrl, self.utrl_conf), user.current_utrl
+        if update.effective_message and update.effective_message.text and update.effective_message.text.startswith('/'):
+            return telega_resolve(update.effective_message.text, self.utrl_conf)
 
-        if callback_func is None:
-            # update.message -- could be data or info for managing, command could not be a data, it is managing info
-            if update.message and (update.message.text is None or update.message.text[0] != '/'):
-                user_details = update.message.from_user
-
-                user = get_user_model().objects.filter(id=user_details.id).first()
-                if user:
-                    logging.info(f'user.current_utrl {user.current_utrl}')
-                    if user.current_utrl:
-                        callback_func = telega_resolve(user.current_utrl, self.utrl_conf)
-        return callback_func
-
-    def check_update(self, update: object):
-        """
-        check if callback or message (command actually is message)
-        :param update:
-        :return:
-        """
-        if isinstance(update, telegram.Update) and (update.effective_message or update.callback_query):
+    def check_update(self, update: Update):
+        if isinstance(update, Update):
             callback = self.get_callback_utrl(update)
-            if callback:
-                return True
-            elif not self.only_utrl:
-                if update.message and update.message.text and update.message.text[0] == '/':
-                    # if it is a command then it should be  early in handlers
-                    # or in BME (then return True
-                    return True
-                elif update.callback_query:
-                    return True
-        return None
+            if type(callback) is tuple:
+                callback, current_utrl = callback
+                fallback_command = None if self.only_utrl or not update.message.text.startswith('/') \
+                    else all_command_bme_handler
+                return telega_resolve(current_utrl, self.utrl_conf) or fallback_command
+            fallback_callback = None if self.only_utrl else all_callback_bme_handler
+            return callback or fallback_callback
 
-    def handle_update(
-        self,
-        update,
-        dispatcher,
-        check_result: object,
-        context=None,
-    ):
-        # todo: add flush utrl and data if viewset utrl change or error
-
-        callback_func = self.get_callback_utrl(update)
-
-        if not callback_func is None:
-            if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegaViewSet):
-                viewset = callback_func.func(callback_func.route)
-
-                decorating = handler_decor(log_type='N',)
-
-                callback_func = decorating(viewset.dispatch)
-
-            else:
-                callback_func = callback_func.func
-
-        # check if in BME (we do not need check only_utrl here, as there was a check in self.check_update)
-        if callback_func is None:
-            if update.callback_query:
-                callback_func = all_callback_bme_handler
-            else:
-                callback_func = all_command_bme_handler
-
+    def handle_update(self, update, dispatcher, check_result: object, context=None):
+        callback_func = check_result
         self.collect_additional_context(context, update, dispatcher, check_result)
+        if callback_func in [all_callback_bme_handler, all_command_bme_handler]:
+            return callback_func(update, context)
+        if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegaViewSet):
+            viewset = callback_func.func(callback_func.route)
+            decorating = handler_decor(log_type='N', )
+            callback_func = decorating(viewset.dispatch)
+        else:
+            callback_func = callback_func.func
         return callback_func(update, context)
 
 
