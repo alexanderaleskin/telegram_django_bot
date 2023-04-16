@@ -2,13 +2,14 @@ from telegram_django_bot.test import TD_TestCase
 from telegram_django_bot.telegram_lib_redefinition import InlineKeyboardButtonDJ, InlineKeyboardMarkupDJ
 from telegram_django_bot.models import BotMenuElem, BotMenuElemAttrText, MESSAGE_FORMAT
 from django.conf import settings
-from telegram import InputMediaPhoto
 
 from test_app.models import User
 
+import unittest
+import telegram
 
 
-
+@unittest.skipIf(int(telegram.__version__.split('.')[0]) >= 20, 'tests do not support async')
 class Test_TG_DJ_BOT(TD_TestCase):
 
     def setUp(self) -> None:
@@ -81,14 +82,14 @@ class Test_TG_DJ_BOT(TD_TestCase):
 
         bot = self.test_callback_context.bot
 
-        message = bot.send_botmenuelem(None, self.user1, None)[0]
+        message = bot.send_botmenuelem(None, self.user1, None)
         self.assertEqual(
             'Oops! It seems that an error has occurred, please write to support (contact in bio)!',
             message.text,
         )
         self.assertIsNone(bme.telegram_file_code)
 
-        message = bot.send_botmenuelem(None, self.user1, bme)[0]
+        message = bot.send_botmenuelem(None, self.user1, bme)
         self.assertEqual(
             'bme send test',
             message.caption,
@@ -98,7 +99,7 @@ class Test_TG_DJ_BOT(TD_TestCase):
         self.user1.telegram_language_code = 'ru'
         self.user1.save()
         update = self.create_update(message.to_dict(), {'data': 'just_for_update'})
-        message = bot.send_botmenuelem(update, self.user1, bme)[0]
+        message = bot.send_botmenuelem(update, self.user1, bme)
         self.assertEqual(
             'bme отправленное сообщение',
             message.caption,

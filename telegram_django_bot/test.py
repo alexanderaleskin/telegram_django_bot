@@ -10,6 +10,7 @@ from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
 # from typing import Union
 
 from .tg_dj_bot import TG_DJ_Bot
+# import asyncio
 
 
 test_bot = TG_DJ_Bot(token=settings.TELEGRAM_TOKEN)
@@ -17,7 +18,11 @@ if hasattr(settings, 'TELEGRAM_TEST_USER_IDS'):
     TELEGRAM_TEST_USER_IDS = settings.TELEGRAM_TEST_USER_IDS
     for user_id in TELEGRAM_TEST_USER_IDS:
         try:
-            test_bot.send_message(user_id, 'ping')
+            res = test_bot.send_message(user_id, 'ping')
+
+            # if asyncio.iscoroutine(res):
+            #     asyncio.run(res)
+
         except Exception as error:
             logging.error(
                 f'the error {error} occurred while sending test message to TELEGRAM_TEST_USER_ID={user_id} '
@@ -49,7 +54,7 @@ class TD_TestCase(DJ_TestCase):
             update, 'some_str', 'some_str', self.test_callback_context
         )
 
-    def create_update(self, message_kwargs:dict=None, callback_kwargs:dict=None, user_id=None,):
+    def create_update(self, message_kwargs: dict = None, callback_kwargs: dict = None, user_id=None,):
         if user_id is None and len(TELEGRAM_TEST_USER_IDS):
             user_id = TELEGRAM_TEST_USER_IDS[0]
 

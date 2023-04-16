@@ -1,3 +1,4 @@
+import telegram
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from telegram_django_bot.test import TD_TestCase
@@ -5,7 +6,7 @@ from telegram_django_bot.models import BotMenuElem, BotMenuElemAttrText
 from telegram_django_bot.routing import all_command_bme_handler, all_callback_bme_handler
 from test_app.models import User
 from django.conf import settings
-
+import unittest
 
 
 class BMEInitData:
@@ -106,34 +107,30 @@ class TestBMEModels(TD_TestCase, BMEInitData):
         self.assertEqual(should_be.to_dict(), InlineKeyboardMarkup(self.bme_start.get_buttons('de')).to_dict())
 
 
+@unittest.skipIf(int(telegram.__version__.split('.')[0]) >= 20, 'tests do not support async')
 class TestBMEHandlers(TD_TestCase, BMEInitData):
     def setUp(self) -> None:
         self.setup_data(True, True)
 
     def test_command_handler(self):
-        result = all_command_bme_handler(self.create_update({'text': '/start'}), self.test_callback_context)
-        message = result[0]
+        message = all_command_bme_handler(self.create_update({'text': '/start'}), self.test_callback_context)
         self.assertEqual('Aloha, world!', message.text)
 
-        result = all_command_bme_handler(self.create_update({'text': '/second'}), self.test_callback_context)
-        message = result[0]
+        message = all_command_bme_handler(self.create_update({'text': '/second'}), self.test_callback_context)
         self.assertEqual('Some message', message.text)
 
         self.user.telegram_language_code = 'ru'
         self.user.save()
-        result = all_command_bme_handler(self.create_update({'text': '/start'}), self.test_callback_context)
-        message = result[0]
+        message = all_command_bme_handler(self.create_update({'text': '/start'}), self.test_callback_context)
         self.assertEqual('Алоха, мир!', message.text)
 
         self.user.telegram_language_code = 'de'
         self.user.save()
-        result = all_command_bme_handler(self.create_update({'text': '/start'}), self.test_callback_context)
-        message = result[0]
+        message = all_command_bme_handler(self.create_update({'text': '/start'}), self.test_callback_context)
         self.assertEqual('Aloha, world!', message.text)
 
     def test_command_handler_special_start(self):
-        result = all_command_bme_handler(self.create_update({'text': '/start special'}), self.test_callback_context)
-        message = result[0]
+        message = all_command_bme_handler(self.create_update({'text': '/start special'}), self.test_callback_context)
         self.assertEqual('Aloha, world!', message.text)
 
         self.bme_extra = BotMenuElem.objects.create(
@@ -143,13 +140,11 @@ class TestBMEHandlers(TD_TestCase, BMEInitData):
             buttons_db='[[{"text": "start", "callback_data": "start"}]]'
         )
 
-        result = all_command_bme_handler(self.create_update({'text': '/start special'}), self.test_callback_context)
-        message = result[0]
+        message = all_command_bme_handler(self.create_update({'text': '/start special'}), self.test_callback_context)
         self.assertEqual('extra start', message.text)
 
     def test_command_handler_no_command(self):
-        result = all_command_bme_handler(self.create_update({'text': '/not_exist'}), self.test_callback_context)
-        message = result[0]
+        message = all_command_bme_handler(self.create_update({'text': '/not_exist'}), self.test_callback_context)
         self.assertEqual(
             'Oops! It seems that an error has occurred, please write to support (contact in bio)!',
             message.text
@@ -159,11 +154,11 @@ class TestBMEHandlers(TD_TestCase, BMEInitData):
         message = self.test_callback_context.bot.send_message(self.user.id, 'for test')
         message_params = {'message_id': message.message_id}
         callback_params = {'data': 'start'}
-        result = all_callback_bme_handler(
+
+        message = all_callback_bme_handler(
             self.create_update(message_params, callback_params),
             self.test_callback_context
         )
-        message = result[0]
         self.assertEqual('Aloha, world!', message.text)
 
 
