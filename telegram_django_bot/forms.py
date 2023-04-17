@@ -73,7 +73,7 @@ class BaseTelegramForm(BaseForm):
         #     filled_fields[first_field_couple[0]] = first_field_couple[1]
 
         next_field = not_filled_fields[0] if len(not_filled_fields) else None
-        return  filled_fields, next_field
+        return  filled_fields, next_field, not_filled_fields
 
 
     def __init__(self, user, data=None, files=None, initial=None):
@@ -84,7 +84,7 @@ class BaseTelegramForm(BaseForm):
         super().__init__(data, files, initial=initial)
         # self.error_class = TelegaErrorList
 
-        self.next_field = self._init_helper_fields_detection(data)[1]
+        self.filled_fields, self.next_field, self.non_filled_fields = self._init_helper_fields_detection(data)
 
     def save(self, commit=True):
         """ save temp data to user data"""
@@ -114,14 +114,6 @@ class BaseTelegramForm(BaseForm):
         self._clean_form()
         self._post_clean()
 
-    def is_valid(self):
-        for field in list(iter(self.errors)):
-            for error in self.errors[field].data:
-                if error.code == 'required':
-                    self.errors[field].data.remove(error)
-            if not self.errors[field]:
-                self.errors.pop(field)
-        return self.is_bound and not self.errors
 
 
 class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
@@ -159,7 +151,7 @@ class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
         # self.error_class = TelegaErrorList
 
         self.next_field = None
-        self.next_field = self._init_helper_fields_detection(data)[1]
+        self.filled_fields, self.next_field, self.non_filled_fields = self._init_helper_fields_detection(data)
 
     def save(self, commit=True, is_completed=True):
         """
