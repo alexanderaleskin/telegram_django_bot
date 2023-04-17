@@ -63,7 +63,7 @@ class UserViewSet(TelegaViewSet):
             return f'+{value} UTC' if value > 0 else f'{value} UTC'
 
         else:
-            return super().gm_value_str(model, field, field_name, try_field)
+            return getattr(model, field_name, "")
 
     def gm_next_field_choice_buttons(self, *args, **kwargs):
         kwargs['self_variant'] = False

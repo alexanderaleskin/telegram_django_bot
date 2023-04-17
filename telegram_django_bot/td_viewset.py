@@ -362,12 +362,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         if want_write_self_variant:
             res = self.gm_self_variant(field, func_response=func_response, instance_id=instance_id)
         else:
-            if not form.is_valid():
-                res = self.gm_value_error(
-                    field or list(form.fields.keys())[-1],
-                    form.errors, func_response=func_response, instance_id=instance_id
-                )
-            else:
+            if form.is_valid():
                 if not show_field_variants_for_update:
                     # todo: rewrite as is_completed will work only form ModelForm
                     form.save(is_completed=not want_1more_variant_for_multichoice)
@@ -390,6 +385,20 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                         res = self.gm_success_created(self.form.instance)
                     else:
                         res = self.show_elem(self.form.instance, _('The field has been updated!\n\n'))
+            elif form.errors:
+                field_name = list(form.errors)[0]
+                mess = ''
+                if field_name not in form.non_filled_fields:
+                    field = form.base_fields[field_name]
+                    mess = str(self.show_texts_dict['generate_message_value_error']) % {'label': field.label,
+                                                                                        'errors': form.errors[field_name]}
+                res = self.gm_next_field(
+                    field_name,
+                    mess=mess,
+                    func_response=func_response,
+                    instance_id=instance_id
+                )
+                form.user.save_form_in_db(form.__class__.__name__, form.cleaned_data)
         return res
 
     def show_list_get_queryset(self, page=0, per_page=10, columns=1, *args, **kwargs):
@@ -466,31 +475,9 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         mess = ''
         for field_name, field in self.telega_form.base_fields.items():
             if type(field.widget) != HiddenInput:
-                mess += f'<pre><b>{field.label}</b>: {self.gm_value_str(model, field, field_name)}</pre>\n'
-
+                mess += f'<pre><b>{field.label}</b>: {getattr(model, field_name, "--")}</pre>\n'
         return mess
 
-    def gm_value_str(self, model, field, field_name, try_field='name'):
-        value = getattr(model, field_name, "")
-
-        if value:
-            if issubclass(type(value), models.Manager):
-                value = value.all()
-
-            if issubclass(value.__class__, models.Model):
-                value = f'{getattr(value, try_field, "# " + str(value.pk))}'
-            elif (type(value) in [list, models.QuerySet]) and all(map(lambda x: issubclass(x.__class__, models.Model), value)):
-                value = ', '.join([f'{getattr(x, try_field, "# " + str(x.pk))}' for x in value])
-        elif type(value) != bool:
-            value = ''
-
-        is_choice_field = issubclass(type(field), ChoiceField)
-        if is_choice_field or field_name in self.prechoice_fields_values:
-            choices = field.choices if is_choice_field else self.prechoice_fields_values[field_name]
-            choice = list(filter(lambda x: x[0] == value, choices))
-            if len(choice):
-                value = choice[0][1]
-        return value
 
     def gm_show_list_elem_info(self, model, it_m:int) -> str:
         mess = f'{it_m}. {self.viewset_name} #{model.pk}\n' if self.use_name_and_id_in_elem_showing else f'{it_m}. '
