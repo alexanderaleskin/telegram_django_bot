@@ -3,7 +3,7 @@ Telegram Django Bot Bridge
 
 This library provides a Python high-level interface for creating Telegram Bots. It standardizes the coding in the best
 practice of the web development. The library is based on `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_.
-and provides viewset interface for managing data with.
+It also provides viewset interface for managing data with.
 
 If you start a new project, you could use `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ with preconfigured settings.
 
@@ -88,15 +88,9 @@ Telegram Django Bot Bridge provides next special opportunities:
 * using Viewsets (typical action with model (create, update, list, delete));
 * using Django localization.
 * using function routing like urls routing in Django.
-
-And some extra useful staff:
-
 * creating general menu items with no-coding (through Django Admin Panel);
-* extra high-level Bot functions, such as a wrapper for sending delayed (or scheduled) messages;
-* creating tests;
 * collecting stats from user actions in the bot;
-* commonly used utilities.
-
+* other useful staff.
 
 
 The key feature of the lib is ``TelegramViewSet`` - a class for managing Django ORM model. It is designed in a
@@ -660,10 +654,12 @@ To support the use of different languages, the main elements of the Python-Teleg
 
 When using these classes in code, multilingual support comes down to the following steps:
 
+
 1. Specifying the necessary settings in the settings.py file: ``LANGUAGES`` - list of languages, ``LANGUAGE_CODE`` - default language;
-1. Necessary texts for translation are wrapped in ``gettext`` and ``gettext_lazy`` from ``django.utils.translation`` (how it works in Django `read here <https://docs.djangoproject.com/en /4.1/topics/i18n/translation/#standard-translation>`_ )
-2. Run command ``$ django-admin makemessages -a`` to generate texts for translation (created in locale folder)
-3. Generation of translation files ``$ django-admin compilemessages``.
+2. Create folder with translations: ``$ django-admin makemessages -l <language_code>``
+3. Necessary texts for translation are wrapped in ``gettext`` and ``gettext_lazy`` from ``django.utils.translation`` (how it works in Django `read here <https://docs.djangoproject.com/en /4.1/topics/i18n/translation/#standard-translation>`_ )
+4. Run command ``$ django-admin makemessages -a`` to update texts for translation (created in locale folder)
+5. Generation of translation files ``$ django-admin compilemessages``.
 
 Only a part of the functions uses localization in the template. It is made for easy understanding. The usage of localization can be seen in the example
 functions ``some_debug_func``.
@@ -674,7 +670,7 @@ Extra lib features
 
 The library provides some additional tools for the convenience of developing and managing the bot.
 
-Модели библиотеки
+Embedded ORM lib models
 ************************************
 
 
