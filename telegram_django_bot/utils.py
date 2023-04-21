@@ -3,6 +3,7 @@ import sys
 from functools import wraps
 import telegram
 
+from django.urls import resolve, Resolver404, reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import ActionLog, TeleDeepLink
@@ -16,7 +17,7 @@ from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
 
-ERROR_MESSAGE = _('Oops! It seems that an error has occurred, please write to support (contact in bio)!')
+ERROR_MESSAGE = _('Error!')
 LOGGING_TELEGRAM_ACTIONS = getattr(settings, 'TELEGRAM_ACTION_LOG', True)
 
 
@@ -138,6 +139,32 @@ def handler_decor(log_type='F', update_user_info=True):
         return wrapper
     return decor
 
+
+def telega_resolve(path, utrl_conf=None):
+    if path[0] != '/':
+        path = f'/{path}'
+
+    if '?' in path:
+        path = path.split('?')[0]
+
+    if utrl_conf is None:
+        utrl_conf = settings.TELEGRAM_ROOT_UTRLCONF
+
+    try:
+        resolver_match = resolve(path, utrl_conf)
+    except Resolver404:
+        resolver_match = None
+    return resolver_match
+
+
+def telega_reverse(viewname, utrl_conf=None, args=None, kwargs=None, current_app=None):
+    if utrl_conf is None:
+        utrl_conf = settings.TELEGRAM_ROOT_UTRLCONF
+
+    response = reverse(viewname, utrl_conf, args, kwargs, current_app)
+    if response[0] == '/':
+        response = response[1:]
+    return response
 
 
 # todo: rewrite code

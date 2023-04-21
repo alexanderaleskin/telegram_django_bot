@@ -1,15 +1,12 @@
 import logging
 from .models import BotMenuElem
-from .utils import handler_decor
+from .utils import handler_decor, telega_resolve
 from .td_viewset import TelegaViewSet
-from django.urls import resolve, Resolver404, reverse
-from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from telegram import (
     Update,
 )
-import inspect
 
 
 try:
@@ -18,33 +15,6 @@ try:
 except ImportError:
     # old version
     from telegram.ext import Handler
-
-
-def telega_resolve(path, utrl_conf=None):
-    if path[0] != '/':
-        path = f'/{path}'
-
-    if '?' in path:
-        path = path.split('?')[0]
-
-    if utrl_conf is None:
-        utrl_conf = settings.TELEGRAM_ROOT_UTRLCONF
-
-    try:
-        resolver_match = resolve(path, utrl_conf)
-    except Resolver404:
-        resolver_match = None
-    return resolver_match
-
-
-def telega_reverse(viewname, utrl_conf=None, args=None, kwargs=None, current_app=None):
-    if utrl_conf is None:
-        utrl_conf = settings.TELEGRAM_ROOT_UTRLCONF
-
-    response = reverse(viewname, utrl_conf, args, kwargs, current_app)
-    if response[0] == '/':
-        response = response[1:]
-    return response
 
 
 @handler_decor(log_type='C')
@@ -80,7 +50,6 @@ def all_callback_bme_handler(bot, update, user):
     return bot.send_botmenuelem(update, user, menu_elem)
 
 
-
 class RouterCallbackMessageCommandHandler(Handler):
     def __init__(self, utrl_conf=None, only_utrl=False, **kwargs):
         kwargs['callback'] = lambda x: 'for base class'
@@ -98,7 +67,7 @@ class RouterCallbackMessageCommandHandler(Handler):
             if user:
                 logging.info(f'user.current_utrl {user.current_utrl}')
                 if user.current_utrl:
-                    return telega_resolve(user.current_utrl, self.utrl_conf), user.current_utrl
+                    return telega_resolve(user.current_utrl, self.utrl_conf)
         if update.effective_message and update.effective_message.text and update.effective_message.text.startswith('/'):
             return telega_resolve(update.effective_message.text, self.utrl_conf)
 
@@ -109,26 +78,23 @@ class RouterCallbackMessageCommandHandler(Handler):
         :return:
         """
         if isinstance(update, Update):
-            callback = self.get_callback_utrl(update)
-            if type(callback) is tuple:
-                callback, current_utrl = callback
-                fallback_command = None if self.only_utrl or not update.message.text.startswith('/') \
-                    else all_command_bme_handler
-                return telega_resolve(current_utrl, self.utrl_conf) or fallback_command
-            fallback_callback = None if self.only_utrl else all_callback_bme_handler
-            return callback or fallback_callback
+            resolver = self.get_callback_utrl(update)
+            if resolver:                
+                self.callback = resolver.func(resolver.route) \
+                    if issubclass(resolver.func, TelegaViewSet) else resolver.func
+                return resolver.route
+            elif not self.only_utrl:
+                if update.callback_query:
+                    self.callback = all_callback_bme_handler
+                elif update.effective_message \
+                        and update.effective_message.text \
+                        and update.effective_message.text.startswith('/'):
+                    self.callback =  all_command_bme_handler
+            else:
+                self.callback = None
+            return self.callback
 
-    def handle_update(self, update, dispatcher, check_result: object, context=None):
-        callback_func = check_result
-        self.collect_additional_context(context, update, dispatcher, check_result)
-        if callback_func in [all_callback_bme_handler, all_command_bme_handler]:
-            return callback_func(update, context)
-        if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegaViewSet):
-            viewset = callback_func.func(callback_func.route)
-            decorating = handler_decor(log_type='N', )
-            callback_func = decorating(viewset.dispatch)
-        else:
-            callback_func = callback_func.func
-        return callback_func(update, context)
-
+    def collect_additional_context(self, context, update, application, check_result) -> None:
+        context.args = check_result
+        
 

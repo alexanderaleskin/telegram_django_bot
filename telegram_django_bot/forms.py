@@ -115,9 +115,8 @@ class BaseTelegramForm(BaseForm):
         self._post_clean()
 
 
-
 class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
-    def __init__(self, user, data=None, files=None, initial=None, instance=None):
+    def __init__(self, user, data={}, files=None, initial=None, instance=None):
         self.user = user
         if instance is None:
             data = self._init_helper_get_data(user, data)

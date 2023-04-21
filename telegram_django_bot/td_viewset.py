@@ -8,7 +8,7 @@ from django.db import models
 from django.forms.fields import ChoiceField, BooleanField
 from django.utils.translation import gettext as _, gettext_lazy
 
-from .utils import add_log_action
+from .utils import add_log_action, handler_decor
 from .telegram_lib_redefinition import InlineKeyboardButtonDJ as inlinebutt
 from .permissions import PermissionAllowAny
 
@@ -126,6 +126,10 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
     # dispatch gets info about user action, checks permissions, selects and executes function
     # (one of the 5 main or self written) basing on user action, and finally send answer to user
 
+    def __call__(self, update, context):
+        decorating = handler_decor(log_type='N', )
+        return decorating(self.dispatch)(update, context)
+
     def dispatch(self, bot, update, user):
         """ terminate function for response """
 
@@ -134,6 +138,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         self.user = user
 
         utrl = update.callback_query.data if update.callback_query else user.current_utrl
+        utrl = utrl or update.effective_message.text[1:]
         utrl_args = self.get_utrl_params(re.sub(f'^{self.prefix}', '', utrl))
         logging.debug(f'used utrl: {utrl}')
 
@@ -280,7 +285,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
                 model_buttons.append(inlinebutt(
                     text=f'{it_m}. {model}',
-                    callback_data=self.gm_callback_data('show_elem', model.pk)
+                    callback_data=self.gm_callback_data('show_elem', model.id)
                 ))
 
             column_buttons = []
@@ -297,7 +302,8 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
         add_button = inlinebutt(text=_('➕ Add'),
                                 callback_data=self.gm_callback_data('create')
-                                )
+                                ) if 'create' in self.actions else inlinebutt(text=" ",
+                                                                              callback_data='void')
         if pagination_buttons:
             buttons += [[
                 pagination_buttons[0][0],
@@ -392,6 +398,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                     field = form.base_fields[field_name]
                     mess = str(self.show_texts_dict['generate_message_value_error']) % {'label': field.label,
                                                                                         'errors': form.errors[field_name]}
+                form.next_field = field_name
                 res = self.gm_next_field(
                     field_name,
                     mess=mess,
@@ -447,7 +454,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         if 'delete' in self.actions:
             buttons.append(
                 [inlinebutt(
-                    text=_('❌ Delete #%(model_id)s') % {'model_id': model.id},
+                    text=_('❌ Delete %(model_id)s') % {'model_id': model},
                     callback_data=self.gm_callback_data('delete', model.id)
                 )]
             )
@@ -473,9 +480,14 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             is_elem = kwargs['full_show']
 
         mess = ''
-        for field_name, field in self.telega_form.base_fields.items():
+        form = self.telega_form(**{
+            'user': self.user,
+            'data': {},
+        })
+        for field_name, field in form.fields.items():
             if type(field.widget) != HiddenInput:
-                mess += f'<pre><b>{field.label}</b>: {getattr(model, field_name, "--")}</pre>\n'
+                value = getattr(model, f"get_{field_name}_display", lambda :getattr(model, field_name, '--'))()
+                mess += f'<pre><b>{field.label}</b>: {value}</pre>\n'
         return mess
 
 
@@ -585,7 +597,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             # todo: add beautiful text view
 
             choices = self.prechoice_fields_values.get(next_field) or \
-                      list(filter(lambda x: x[0], self.telega_form.base_fields[next_field].choices))
+                      list(self.telega_form.base_fields[next_field].choices)[1:]
 
             selected_variants = []
             if self.form and self.form.is_valid() and next_field in self.form.cleaned_data:
