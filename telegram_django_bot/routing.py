@@ -48,23 +48,16 @@ def telega_reverse(viewname, utrl_conf=None, args=None, kwargs=None, current_app
 
 @handler_decor(log_type='C')
 def all_command_bme_handler(bot, update, user):
-    command = update.effective_message.text[:1]
-    if command and command.startswith('start'):
-        if command[6:]:  # 'start ' + something
-            menu_elem = BotMenuElem.objects.filter(
-                command__startswith=command,
-                is_visable=True,
-            ).first()
-        else:
-            menu_elem = BotMenuElem.objects.filter(
-                command='start',
-                is_visable=True,
-            ).first()
-    else:
-        menu_elem = BotMenuElem.objects.filter(
-            command__regex=command+"(\r\n|$)",
-            is_visable=True,
-        ).first()
+    command = update.effective_message.text[1:]
+    command_split = command.split()
+    menu_elem = BotMenuElem.objects.filter(
+                    command__regex=command + "(\r\n|$)",
+                    is_visable=True,
+                ).first() or \
+                BotMenuElem.objects.filter(
+                    command__regex=command_split[0] if command_split else '' + "(\r\n|$)",
+                    is_visable=True,
+                ).first()
     return bot.send_botmenuelem(update, user, menu_elem)
 
 
@@ -117,7 +110,8 @@ class RouterCallbackMessageCommandHandler(Handler):
             if callback:
                 return True
             elif not self.only_utrl:
-                if update.effective_message and update.effective_message.text and update.effective_message.text.startswith('/'):
+                if update.effective_message and update.effective_message.text and update.effective_message.text.startswith(
+                        '/'):
                     # if it is a command then it should be  early in handlers
                     # or in BME (then return True
                     return True

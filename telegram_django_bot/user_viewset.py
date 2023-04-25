@@ -63,6 +63,6 @@ class UserViewSet(TelegaViewSet):
         else:
             return super().generate_value_str(model, field, field_name, try_field)
 
-    def generate_message_next_field_choice_buttons(self, *args, **kwargs):
+    def gm_next_field_choice_buttons(self, *args, **kwargs):
         kwargs['self_variant'] = False
-        return super().generate_message_next_field_choice_buttons(*args, **kwargs)
+        return super().gm_next_field_choice_buttons(*args, **kwargs)
