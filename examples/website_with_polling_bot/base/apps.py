@@ -5,7 +5,7 @@ import asyncio
 
 class BaseConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'website_with_polling_bot.base'
+    name = 'base'
     verbose_name = "Your App data"
 
     def __init__(self, app_name, app_module):
