@@ -10,6 +10,8 @@ from django.contrib.auth import get_user_model
 from .models import Trigger, UserTrigger, ActionLog
 from .tg_dj_bot import TG_DJ_Bot
 from celery import current_app
+
+
 # from .utils import send_botmenuelem, task_send_message_handler
 
 
@@ -102,7 +104,6 @@ def create_triggers():
             send_triggers.delay(trig_users)
 
 
-
 @current_app.task
 def send_triggers(user_ids):
     dttm_now = timezone.now()
@@ -126,11 +127,11 @@ def send_triggers(user_ids):
     sent_user_triggers = []
     for user_trigger in user_triggers:
         is_sent, res_mess = bot.task_send_message_handler(
-            _send_wrapper,
             user_trigger.user,
-            None,
-            user_trigger.user,  # для task_send_message_handler и для send_botmenuelem
-            user_trigger.trigger.botmenuelem
+            _send_wrapper,
+            func_kwargs={'update': None,
+                         'user': user_trigger.user,  # для task_send_message_handler и для send_botmenuelem
+                         'menu_elem': user_trigger.trigger.botmenuelem}
         )
         if is_sent:
             sent_user_triggers.append(user_trigger)
@@ -142,5 +143,3 @@ def send_triggers(user_ids):
             user_id=x.user_id
         ) for x in sent_user_triggers
     ])
-
-

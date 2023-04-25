@@ -7,7 +7,6 @@ from .forms import TelegaModelForm, BaseModelForm, BaseTelegramForm
 from .td_viewset import TelegaViewSet
 
 
-
 class UserForm(TelegaModelForm):
     form_name = _('User')
 
@@ -33,7 +32,6 @@ class UserForm(TelegaModelForm):
                 translation.activate(self.user.language_code)
         else:
             BaseTelegramForm.save(self, commit=commit)
-
 
 
 class UserViewSet(TelegaViewSet):

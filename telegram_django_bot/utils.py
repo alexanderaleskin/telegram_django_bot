@@ -1,3 +1,4 @@
+import asyncio
 import sys
 
 from functools import wraps
@@ -5,6 +6,8 @@ import telegram
 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from telegram import Update
+
 from .models import ActionLog, TeleDeepLink
 from .telegram_lib_redefinition import (
     InlineKeyboardButtonDJ as inlinebutt
@@ -15,8 +18,10 @@ from dateutil.relativedelta import relativedelta
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
-
-ERROR_MESSAGE = _('Oops! It seems that an error has occurred, please write to support (contact in bio)!')
+ERROR_MESSAGE = getattr(settings,
+                        'TELEGRAM_ERROR_MESSAGE',
+                        _('Oops! It seems that an error has occurred, please write to support (contact in bio)!')
+                        )
 LOGGING_TELEGRAM_ACTIONS = getattr(settings, 'TELEGRAM_ACTION_LOG', True)
 
 
@@ -35,23 +40,17 @@ def handler_decor(log_type='F', update_user_info=True):
 
     def decor(func):
         @wraps(func)
-        def wrapper(update, CallbackContext):
+        def wrapper(update: Update, CallbackContext):
             def check_first_income():
-                if update and update.message and update.message.text:
-                    query_words = update.message.text.split()
-                    if len(query_words) > 1 and query_words[0] == '/start':
-                        telelink, _ = TeleDeepLink.objects.get_or_create(link=query_words[1])
-                        telelink.users.add(user)
+                if update and update.effective_message and update.effective_message.text:
+                    query = update.effective_message.text
+                    if query.startswith('/start ') and query[7:]:
+                        tele_link, _ = TeleDeepLink.objects.get_or_create(link=query[7:])
+                        tele_link.users.add(user)
 
             bot = CallbackContext.bot
 
             user_details = update.effective_user
-            # if update.callback_query:
-            #     user_details = update.callback_query.from_user
-            # elif update.inline_query:
-            #     user_details = update.inline_query.from_user
-            # else:
-            #     user_details = update.message.from_user
 
             if user_details is None:
                 raise ValueError(
@@ -63,7 +62,6 @@ def handler_decor(log_type='F', update_user_info=True):
             user_adding_info = {
                 'username': '{}'.format(user_details.id),
                 'telegram_language_code': user_details.language_code or 'en',
-
                 'telegram_username': user_details.username[:64] if user_details.username else '',
                 'first_name': user_details.first_name[:30] if user_details.first_name else '',
                 'last_name': user_details.last_name[:60] if user_details.last_name else '',
@@ -113,31 +111,46 @@ def handler_decor(log_type='F', update_user_info=True):
                 raise_error = error.with_traceback(tb)
 
             # log actions
-
-            if log_type != 'N':
+            # must be different of None
+            if log_type:
+                log_value = ''
                 if log_type == 'C':
                     if update.callback_query:
                         log_value = update.callback_query.data
                     else:
-                        log_value = update.message.text
+                        if update.effective_message.text:
+                            log_value = update.effective_message.text
+                        elif update.effective_message.caption:
+                            # todo message is not a text; record hash, entities or what?
+                            log_value = update.effective_message.caption
                 elif log_type == 'U':
                     log_value = user.current_utrl
-                # elif log_type == 'F':
-                else:
+                elif log_type == 'F':
                     log_value = func.__name__
 
                 add_log_action(user.id, log_value[:32])
 
-            if ActionLog.objects.filter(user=user, type='ACTION_ACTIVE_TODAY', dttm__date=timezone.now().date()).count() == 0:
+            if ActionLog.objects.filter(user=user, type='ACTION_ACTIVE_TODAY',
+                                        dttm__date=timezone.now().date()).count() == 0:
                 add_log_action(user.id, 'ACTION_ACTIVE_TODAY')
 
             if raise_error:
+                loop = asyncio.get_event_loop()
+                try:
+                    # first send error message to user, then raise exception
+                    # works for PTB 20.x
+                    task = loop.create_task(res)
+                    while not task.done():
+                        pass
+                except:
+                    pass
                 raise raise_error
 
             return res
-        return wrapper
-    return decor
 
+        return wrapper
+
+    return decor
 
 
 # todo: rewrite code
@@ -317,7 +330,6 @@ class CalendarPagination:
                     if month_day in self.selected_values:
                         button_text = f'{self.SELECTED_TICK} {button_text}'
 
-
                 else:
                     button_text = '\u200b'
                     button_callback = curr_month_callback
@@ -327,4 +339,3 @@ class CalendarPagination:
                 )
             month_buttons.append(week_buttons)
         return month_buttons
-
