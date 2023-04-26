@@ -24,6 +24,7 @@ INSTALLED_APPS = (
     "django.contrib.messages",
     "django.contrib.sessions",
     "django.contrib.staticfiles",
+    "django_json_widget",
     "telegram_django_bot",
     "test_app",
 )
