@@ -147,3 +147,7 @@ class RouterCallbackMessageCommandHandler(Handler):
 
         self.collect_additional_context(context, update, dispatcher, check_result)
         return callback_func(update, context)
+
+
+telegram_reverse = telega_reverse
+telegram_resolve = telega_resolve
