@@ -1,0 +1,29 @@
+version: '2.4'
+
+services:
+  web_base:
+    build: ./
+    restart: unless-stopped
+    volumes:
+      - ./:/webapp  # do not use this for production
+      - ../mounts/logs:/web/logs
+      - ../mounts/media:/web/media
+      - ../mounts/logs/uwsgi:/web/logs/uwsgi
+      - ../mounts/static:/web/static
+#      - ../local_settings_web.py:/webapp/src/conf/djconfig_local.py
+      - ../mounts/ipython_data:/root/.ipython/profile_default
+      - ../mounts/uwsgi:/web/uwsgi/
+    environment:
+#      HOST: http://web2:80
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+    env_file:
+      - .env
+
+  web_celery_base:
+    extends:
+      service: web_base
+    environment:
+      C_FORCE_ROOT: 1

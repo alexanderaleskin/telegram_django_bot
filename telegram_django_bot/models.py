@@ -105,7 +105,8 @@ class TelegramUser(AbstractUser):
 
     timezone = models.DurationField(default=timezone.timedelta(hours=3))
 
-    current_utrl = models.CharField(max_length=64, default='', blank=True) # todo: add verify comparisson current_utrl and current_utrl_context_db/current_utrl_form_db
+    current_utrl = models.CharField(max_length=64, default='',
+                                    blank=True)  # todo: add verify comparisson current_utrl and current_utrl_context_db/current_utrl_form_db
     current_utrl_code_dttm = models.DateTimeField(null=True, blank=True)
     current_utrl_context_db = models.CharField(max_length=4096, default='{}', blank=True)
 
@@ -173,7 +174,6 @@ class TelegramUser(AbstractUser):
             if hasattr(self, attr):
                 delattr(self, attr)
 
-
     @property
     def language_code(self):
         if self.telegram_language_code in map(lambda x: x[0], settings.LANGUAGES):
@@ -191,7 +191,7 @@ class TelegramUser(AbstractUser):
             logging.warning(f"Try to save user without ID. For staff the smallest unused ID will be used: {id_num}")
 
         return super(TelegramUser, self).save(*args, **kwargs)
-            
+
 
 class TeleDeepLink(models.Model):
     title = models.CharField(max_length=64, default='', blank=True)
@@ -204,6 +204,7 @@ class TeleDeepLink(models.Model):
 
     def __str__(self):
         return f'TDL({self.id}, {self.link})'
+
 
 class ActionLog(models.Model):
     """
@@ -232,6 +233,7 @@ class BotMenuElem(models.Model):
         default=False,
         help_text=_('This block will be shown if there is no catching callback')
     )
+    # todo fixme spelling, should be visible
     is_visable = models.BooleanField(
         default=True,
         help_text=_('Whether to display this menu block to users (can be hidden and not deleted for convenience)')
@@ -241,7 +243,8 @@ class BotMenuElem(models.Model):
         default='[]',
         help_text=_(
             'List of regular expressions (so far only an explicit list) for callbacks that call this menu block. '
-            'For example, list ["data", "callback2"] will catch the clicking InlineKeyboardButtons with callback_data "data" or "callback2"'
+            'For example, list ["data", "callback2"] will catch the clicking InlineKeyboardButtons with callback_data '
+            '"data" or "callback2"'
         )
     )
 
@@ -264,11 +267,11 @@ class BotMenuElem(models.Model):
     )
 
     def __str__(self):
-        return f"BME({self.id}, { self.command[:32] if self.command else self.message[:32]})"
+        return f"BME({self.id}, {self.command[:32] if self.command else self.message[:32]})"
 
     def save(self, *args, **kwargs):
         # bot = telegram.Bot(TELEGRAM_TOKEN)
-        
+
         super(BotMenuElem, self).save(*args, **kwargs)
 
         # check and create new models for translation
@@ -292,7 +295,8 @@ class BotMenuElem(models.Model):
                 for elem in row_elem:
                     if text := elem.get('text'):
                         BotMenuElemAttrText.objects.bulk_create([
-                            BotMenuElemAttrText(language_code=language_code, default_text=text, bot_menu_elem_id=self.id)
+                            BotMenuElemAttrText(language_code=language_code, default_text=text,
+                                                bot_menu_elem_id=self.id)
                             for language_code in language_codes - get_existed_language_codes(text)
                         ])
 
@@ -363,7 +367,6 @@ class BotMenuElemAttrText(models.Model):
 
 
 class Trigger(AbstractActiveModel):
-
     name = models.CharField(max_length=512, unique=True)
     condition_db = models.TextField(help_text='''
     {
@@ -394,7 +397,7 @@ class Trigger(AbstractActiveModel):
         return self._condition
 
     @staticmethod
-    def get_timedelta(delta_string:str):
+    def get_timedelta(delta_string: str):
         days = 0
         hours = 0
         for part in delta_string.split():
@@ -416,4 +419,3 @@ class UserTrigger(TelegramAbstractActiveModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
 
     is_sent = models.BooleanField(default=False)
-

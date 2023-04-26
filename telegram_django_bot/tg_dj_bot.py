@@ -272,7 +272,7 @@ class TG_DJ_Bot(BotDJ):
 
         return response, media_files_codes
 
-    def task_send_message_handler(bot, user, func, func_args, func_kwargs):
+    def task_send_message_handler(bot, user, func, func_args=(), func_kwargs={}):
         is_sent = False
         res_mess = None
         try:

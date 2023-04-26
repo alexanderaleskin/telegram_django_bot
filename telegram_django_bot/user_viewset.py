@@ -7,7 +7,6 @@ from .forms import TelegaModelForm, BaseModelForm, BaseTelegramForm
 from .td_viewset import TelegaViewSet
 
 
-
 class UserForm(TelegaModelForm):
     form_name = _('User')
 
@@ -33,7 +32,6 @@ class UserForm(TelegaModelForm):
                 translation.activate(self.user.language_code)
         else:
             BaseTelegramForm.save(self, commit=commit)
-
 
 
 class UserViewSet(TelegaViewSet):
@@ -65,6 +63,6 @@ class UserViewSet(TelegaViewSet):
         else:
             return super().generate_value_str(model, field, field_name, try_field)
 
-    def generate_message_next_field_choice_buttons(self, *args, **kwargs):
+    def gm_next_field_choice_buttons(self, *args, **kwargs):
         kwargs['self_variant'] = False
-        return super().generate_message_next_field_choice_buttons(*args, **kwargs)
+        return super().gm_next_field_choice_buttons(*args, **kwargs)

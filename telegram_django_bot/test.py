@@ -5,12 +5,8 @@ from django.conf import settings
 from django.utils import timezone
 from telegram import Update, Message, Chat, User as TelegramAPIUser, CallbackQuery
 from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
-# from telegram.utils.types import JSONDict, ODVInput
-# from telegram.utils.helpers import DEFAULT_NONE
-# from typing import Union
 
 from .tg_dj_bot import TG_DJ_Bot
-# import asyncio
 
 
 test_bot = TG_DJ_Bot(token=settings.TELEGRAM_TOKEN)
@@ -19,10 +15,6 @@ if hasattr(settings, 'TELEGRAM_TEST_USER_IDS'):
     for user_id in TELEGRAM_TEST_USER_IDS:
         try:
             res = test_bot.send_message(user_id, 'ping')
-
-            # if asyncio.iscoroutine(res):
-            #     asyncio.run(res)
-
         except Exception as error:
             logging.error(
                 f'the error {error} occurred while sending test message to TELEGRAM_TEST_USER_ID={user_id} '
@@ -55,10 +47,10 @@ class TD_TestCase(DJ_TestCase):
         )
 
     def create_update(self, message_kwargs: dict = None, callback_kwargs: dict = None, user_id=None,):
-        if user_id is None and len(TELEGRAM_TEST_USER_IDS):
+        if not user_id and TELEGRAM_TEST_USER_IDS:
             user_id = TELEGRAM_TEST_USER_IDS[0]
 
-        if user_id is None:
+        if not user_id:
             raise ValueError('the user_id (or TELEGRAM_TEST_USER_IDS) should be set for creating Update model')
 
         chat = Chat(id=user_id, type='private')
@@ -90,10 +82,3 @@ class TD_TestCase(DJ_TestCase):
             update_kwargs['message'] = message
 
         return Update(**update_kwargs)
-
-
-
-
-
-
-

@@ -82,12 +82,13 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
     use_name_and_id_in_elem_showing = True
 
     meta_texts_dict = {
-        'succesfully_deleted': gettext_lazy('The %(viewset_name)s  %(model_id)s is successfully deleted.'),
+        'successfully_deleted': gettext_lazy('The %(viewset_name)s  %(model_id)s is successfully deleted.'),
         'confirm_deleting': gettext_lazy('Are you sure you want to delete %(viewset_name)s  %(model_id)s?'),
         'confirm_delete_button_text': gettext_lazy('🗑 Yes, delete'),
         'generate_message_next_field': gettext_lazy('Please, fill the field %(label)s\n\n'),
         'generate_message_success_created': gettext_lazy('The %(viewset_name)s is created! \n\n'),
-        'generate_message_value_error': gettext_lazy('While adding %(label)s the next errors were occurred: %(errors)s\n\n'),
+        'generate_message_value_error': gettext_lazy(
+            'While adding %(label)s the next errors were occurred: %(errors)s\n\n'),
         'generate_message_self_variant': gettext_lazy('Please, write the value for field %(label)s \n\n'),
         'generate_message_no_elem': gettext_lazy(
             'The %(viewset_name)s %(model_id)s has not been found 😱 \nPlease try again from the beginning.'
@@ -147,7 +148,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
         res = self.send_answer(chat_reply_action, chat_action_args, utrl)
 
-        utrl_path = utrl.split(self.ARGS_SEPARATOR_SYMBOL)[0]   # log without params as there are too much varients
+        utrl_path = utrl.split(self.ARGS_SEPARATOR_SYMBOL)[0]  # log without params as there are too much varients
         add_log_action(self.user.id, utrl_path)
         return res
 
@@ -202,7 +203,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         if model:
             return self.create_or_update_helper(field, value, func_response='change', instance=model)
         else:
-            return self.generate_message_no_elem(model_or_pk)
+            return self.gm_no_elem(model_or_pk)
 
     def delete(self, model_or_pk, is_confirmed=False):
         """delete item"""
@@ -220,7 +221,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
-            return self.generate_message_no_elem(model_or_pk)
+            return self.gm_no_elem(model_or_pk)
 
     def show_elem(self, model_or_pk, mess=''):
         """
@@ -243,7 +244,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
-            return self.generate_message_no_elem(model_or_pk)
+            return self.gm_no_elem(model_or_pk)
 
     def show_list(self, page=0, per_page=10, columns=1, *args, **kwargs):
         """show list items"""
@@ -286,8 +287,10 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
     def create_or_update_helper(self, field, value, func_response='create', instance=None, initial_data=None):
         # init data
-        is_multichoice_field = self.telega_form.base_fields[field].__class__ == ModelMultipleChoiceField if field else False
-        show_field_variants_for_update = (func_response == 'change') and (value is None) and (self.update.message is None)
+        is_multichoice_field = self.telega_form.base_fields[
+                                   field].__class__ == ModelMultipleChoiceField if field else False
+        show_field_variants_for_update = (func_response == 'change') and (value is None) and (
+                self.update.message is None)
         want_1more_variant_for_multichoice = True
         want_write_self_variant = False
         data = {} if initial_data is None else copy.deepcopy(initial_data)
@@ -327,10 +330,10 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
         # show message or change data in backend...
         if want_write_self_variant:
-            res = self.generate_message_self_variant(field, func_response=func_response, instance_id=instance_id)
+            res = self.gm_self_variant(field, func_response=func_response, instance_id=instance_id)
         else:
             if not form.is_valid():
-                res = self.generate_message_value_error(
+                res = self.gm_value_error(
                     field or list(form.fields.keys())[-1],
                     form.errors, func_response=func_response, instance_id=instance_id
                 )
@@ -340,21 +343,21 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                     form.save(is_completed=not want_1more_variant_for_multichoice)
 
                 if want_1more_variant_for_multichoice or show_field_variants_for_update:
-                    res = self.generate_message_next_field(
+                    res = self.gm_next_field(
                         field,
                         func_response=func_response,
                         instance_id=instance_id
                     )
 
                 elif form.next_field:
-                    res = self.generate_message_next_field(
+                    res = self.gm_next_field(
                         form.next_field,
                         func_response=func_response,
                         instance_id=instance_id
                     )
                 else:
                     if func_response == 'create':
-                        res = self.generate_message_success_created(self.form.instance)
+                        res = self.gm_success_created(self.form.instance)
                     else:
                         res = self.show_elem(self.form.instance, _('The field has been updated!\n\n'))
         return res
@@ -451,11 +454,12 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
         if value:
             if issubclass(type(value), models.Manager):
-                value = value.all()
+                value = value.select_related()
 
             if issubclass(value.__class__, models.Model):
                 value = f'{getattr(value, try_field, "# " + str(value.pk))}'
-            elif (type(value) in [list, models.QuerySet]) and all(map(lambda x: issubclass(x.__class__, models.Model), value)):
+            elif (type(value) in [list, models.QuerySet]) and all(
+                    map(lambda x: issubclass(x.__class__, models.Model), value)):
                 value = ', '.join([f'{getattr(x, try_field, "# " + str(x.pk))}' for x in value])
         elif type(value) != bool:
             value = ''
@@ -468,14 +472,14 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 value = choice[0][1]
         return value
 
-    def gm_show_list_elem_info(self, model, it_m:int) -> str:
+    def gm_show_list_elem_info(self, model, it_m: int) -> str:
         mess = f'{it_m}. {self.viewset_name} #{model.pk}\n' if self.use_name_and_id_in_elem_showing else f'{it_m}. '
-        mess += self.generate_show_fields(model)
+        mess += self.gm_show_elem_or_list_fields(model)
         mess += '\n\n'
         return mess
 
     def gm_show_list_button_names(self, it_m, model):
-        return f'{it_m}. {self.viewset_name} #{ model.pk}'
+        return f'{it_m}. {self.viewset_name} #{model.pk}'
 
     def gm_show_list_create_pagination(
             self,
@@ -581,8 +585,8 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 )
             # todo: add beautiful text view
 
-            choices = self.prechoice_fields_values.get(next_field) or \
-                      list(filter(lambda x: x[0], self.telega_form.base_fields[next_field].choices))
+            choices = self.prechoice_fields_values.get(next_field) \
+                      or list(filter(lambda x: x[0], self.telega_form.base_fields[next_field].choices))
 
             selected_variants = []
             if self.form and self.form.is_valid() and next_field in self.form.cleaned_data:
@@ -601,7 +605,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                         else:
                             selected_variants = field_value
 
-            buttons += self.generate_message_next_field_choice_buttons(
+            buttons += self.gm_next_field_choice_buttons(
                 next_field, func_response, choices, selected_variants, callback_path
             )
 
@@ -629,7 +633,8 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
             return self.CHAT_ACTION_MESSAGE, (mess, buttons)
         else:
-            return self.generate_message_self_variant(next_field, mess, func_response=func_response, instance_id=instance_id)
+            return self.gm_self_variant(next_field, mess, func_response=func_response,
+                                                      instance_id=instance_id)
 
     def gm_success_created(self, model_or_pk=None, mess=''):
 
@@ -644,7 +649,8 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         mess += self.show_texts_dict['generate_message_value_error'] % {'label': field.label, 'errors': errors}
 
         # error could be only in self_variant?
-        return self.generate_message_self_variant(field_name, mess, func_response=func_response, instance_id=instance_id)
+        return self.gm_self_variant(field_name, mess, func_response=func_response,
+                                                  instance_id=instance_id)
 
     def gm_self_variant(self, field_name, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
@@ -733,7 +739,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         return mess, buttons
 
     def gm_delete_successfully(self, model):
-        mess = self.show_texts_dict['succesfully_deleted'] % {
+        mess = self.show_texts_dict['successfully_deleted'] % {
             'viewset_name': self.viewset_name,
             'model_id': f'#{model.id}' or '',
         }
@@ -764,5 +770,3 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
 
 TelegaViewSet = TelegramViewSet  # for legacy
-
-
