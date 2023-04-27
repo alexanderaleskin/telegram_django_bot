@@ -27,7 +27,10 @@ Then you can configure it in your app:
     INSTALLED_APPS = [
         ...
         'telegram_django_bot',
-        'django_json_widget', # needed for django admin site
+
+        # needed for django admin site
+        'django_json_widget', 
+        'django_admin_listfilter_dropdown',
     ]
 
 .. important::
