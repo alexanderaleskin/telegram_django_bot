@@ -56,12 +56,14 @@ in settings).
 
 4. This step connects ``Telegram Django Bot Bridge`` with ``Python-Telegram-Bot``. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF :
 
+
 .. code-block:: python
 
     updater = Updater(bot=TG_DJ_Bot(settings.TELEGRAM_TOKEN))
     updater.dispatcher.add_handler(RouterCallbackMessageCommandHandler())
 
 or in 20.x version :
+
 
 .. code-block:: python
 
@@ -189,6 +191,7 @@ dispatcher/application as it is mentioned above in the *Install paragraph*.
 
 For correct mapping *RequestViewSet*  you should write in the TELEGRAM_ROOT_UTRLCONF file something like this:
 
+
 .. code-block:: python
 
     from django.urls import re_path
@@ -228,6 +231,8 @@ Since Telegram bots are designed as a tool for responding to user requests, writ
 from the user request handler. For this, the standard tools of the Python-Telegram-Bot library are used ﹣
 ``telegram.ext.Update``:
 
+
+
 .. code-block:: python
 
      from telegram.ext import Updater
@@ -242,8 +247,12 @@ from the user request handler. For this, the standard tools of the Python-Telegr
 
      if __name__ == '__main__':
          main()
-For versions 20.x or higher of python-telegram-bot would be like this
+
+For versions 20.x or higher of python-telegram-bot would be like this:
+
+
 .. code-block:: python
+
     from telegram.ext import ApplicationBuilder
     import os, django
     from telegram.request import HTTPXRequest
@@ -285,6 +294,7 @@ For versions 20.x or higher of python-telegram-bot would be like this
 
 
 
+
 As indicated in the example, to run the bot (Update) you need to specify a few things (the ``Python-Telegram-Bot`` library standard):
 
 1. an instance of the ``telegram.Bot`` model with the specified API token. In this case, a descendant ``telegram_django_bot.tg_dj_bot.TG_DJ_Bot``
@@ -306,6 +316,7 @@ The ``TELEGRAM_ROOT_UTRLCONF`` (same as ``ROOT_URLCONF`` for WEB) attribute is u
 
 
 ``bot_conf.settings.py``:
+
 
 .. code-block:: python
 
@@ -370,7 +381,7 @@ the Django ORM database model. ``TelegramViewSet`` has 5 functions for managing 
 
 
 ========= ======== ===========================
- Метод     UTRL      Description
+ Method    UTRL      Description
 --------- -------- ---------------------------
 create     cr       Create model
 change     up       Change model attributes
