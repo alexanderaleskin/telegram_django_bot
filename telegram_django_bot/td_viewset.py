@@ -333,10 +333,19 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             res = self.gm_self_variant(field, func_response=func_response, instance_id=instance_id)
         else:
             if not form.is_valid():
-                res = self.gm_value_error(
-                    field or list(form.fields.keys())[-1],
-                    form.errors, func_response=func_response, instance_id=instance_id
+                field_name = list(form.errors)[0]
+                mess = ''
+                if field_name in form.filled_fields:
+                    field = form.base_fields[field_name]
+                    mess = str(self.show_texts_dict['generate_message_value_error']) \
+                        % {'label': field.label, 'errors': form.errors[field_name]}
+                res = self.gm_next_field(
+                    field_name,
+                    mess=mess,
+                    func_response=func_response,
+                    instance_id=instance_id
                 )
+                self.user.save_form_in_db(form.__class__.__name__, form.cleaned_data)
             else:
                 if not show_field_variants_for_update:
                     # todo: rewrite as is_completed will work only form ModelForm
