@@ -333,10 +333,19 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             res = self.gm_self_variant(field, func_response=func_response, instance_id=instance_id)
         else:
             if not form.is_valid():
-                res = self.gm_value_error(
-                    field or list(form.fields.keys())[-1],
-                    form.errors, func_response=func_response, instance_id=instance_id
+                field_name = list(form.errors)[0]
+                mess = ''
+                if field_name in form.filled_fields:
+                    field = form.base_fields[field_name]
+                    mess = str(self.show_texts_dict['generate_message_value_error']) \
+                        % {'label': field.label, 'errors': form.errors[field_name]}
+                res = self.gm_next_field(
+                    field_name,
+                    mess=mess,
+                    func_response=func_response,
+                    instance_id=instance_id
                 )
+                self.user.save_form_in_db(form.__class__.__name__, form.cleaned_data)
             else:
                 if not show_field_variants_for_update:
                     # todo: rewrite as is_completed will work only form ModelForm
@@ -491,15 +500,11 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
     ) -> []:
         prev_page_button = inlinebutt(
             text=f'◀️️️',
-            callback_data=self.generate_message_callback_data(
-                self.command_routings['command_routing_show_list'], str(page - 1),
-            )
+            callback_data=self.gm_callback_data('show_list', str(page - 1))
         )
         next_page_button = inlinebutt(
             text=f'️▶️️',
-            callback_data=self.generate_message_callback_data(
-                self.command_routings['command_routing_show_list'], str(page + 1),
-            )
+            callback_data=self.gm_callback_data('show_list', str(page + 1))
         )
 
         buttons = []
@@ -548,7 +553,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
         buttons = list([
             [inlinebutt(
-                text=text if not value in selected_variants else f'✅ {text}',
+                text=f'{text}' if not value in selected_variants else f'✅ {text}',
                 callback_data=callback_path(value)
             )] for value, text in choices
         ])
@@ -576,17 +581,20 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 mess += f'{field.help_text}\n\n'
 
             if instance_id:
-                callback_path = lambda x: self.generate_message_callback_data(
-                    self.command_routings[f'command_routing_{func_response}'], instance_id, next_field, x
-                )
+                callback_path = lambda x: self.gm_callback_data(func_response, instance_id, next_field, x)
             else:
-                callback_path = lambda x: self.generate_message_callback_data(
-                    self.command_routings[f'command_routing_{func_response}'], next_field, x
-                )
+                callback_path = lambda x: self.gm_callback_data(func_response, next_field, x)
             # todo: add beautiful text view
+            choices = []
+            if hasattr(field, 'choices'):
+                choices = field.choices
+                if hasattr(choices, 'queryset'):
+                    choices = [[x.id, x.name] for x in choices.queryset.select_related()]
+                else:
+                    choices = choices[1:]
 
             choices = self.prechoice_fields_values.get(next_field) \
-                      or list(filter(lambda x: x[0], self.telega_form.base_fields[next_field].choices))
+                      or list(filter(lambda x: x[0], choices))
 
             selected_variants = []
             if self.form and self.form.is_valid() and next_field in self.form.cleaned_data:
@@ -638,7 +646,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
     def gm_success_created(self, model_or_pk=None, mess=''):
 
-        mess += self.show_texts_dict['generate_message_success_created'] % {'viewset_name': self.viewset_name}
+        mess += str(self.show_texts_dict['generate_message_success_created']) % {'viewset_name': self.viewset_name}
 
         if model_or_pk:
             return self.show_elem(model_or_pk, mess)
@@ -646,7 +654,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
 
     def gm_value_error(self, field_name, errors, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
-        mess += self.show_texts_dict['generate_message_value_error'] % {'label': field.label, 'errors': errors}
+        mess += str(self.show_texts_dict['generate_message_value_error']) % {'label': field.label, 'errors': errors}
 
         # error could be only in self_variant?
         return self.gm_self_variant(field_name, mess, func_response=func_response,
@@ -655,22 +663,16 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
     def gm_self_variant(self, field_name, mess='', func_response='create', instance_id=None):
         field = self.telega_form.base_fields[field_name]
 
-        mess += self.show_texts_dict['generate_message_self_variant'] % {'label': field.label}
+        mess += str(self.show_texts_dict['generate_message_self_variant']) % {'label': field.label}
 
         if field.help_text:
             mess += f'{field.help_text}\n\n'
 
         if instance_id:
-            current_utrl = self.generate_message_callback_data(
-                self.command_routings[f'command_routing_{func_response}'],
-                instance_id,
-                field_name
-            )
+            current_utrl = self.gm_callback_data(func_response, instance_id, field_name)
         else:
-            current_utrl = self.generate_message_callback_data(
-                self.command_routings[f'command_routing_{func_response}'],
-                field_name
-            )
+            current_utrl = self.gm_callback_data(func_response, field_name)
+
 
         self.user.current_utrl = current_utrl
         self.user.save()
@@ -697,10 +699,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         elif self.show_cancel_updating_button and instance_id and 'show_elem' in self.actions:
             buttons.append([inlinebutt(
                 text=_('⬅️ Go back'),
-                callback_data=self.generate_message_callback_data(
-                    self.command_routings[f'command_routing_show_elem'],
-                    instance_id
-                )
+                callback_data=self.gm_callback_data('show_elem', instance_id)
             )])
         return self.CHAT_ACTION_MESSAGE, (mess, buttons)
 
