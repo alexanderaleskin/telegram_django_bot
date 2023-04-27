@@ -3,7 +3,7 @@ Telegram Django Bot Bridge
 
 This library provides a Python high-level interface for creating Telegram Bots using Django. It standardizes the coding in the best
 practice of the web development. Based on `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_,
-it provides viewset interface for managing data with, alongside forms easily define interaction with Django model classes.
+it provides viewset interface for managing data alongside forms for interaction with Django model classes.
 
 If you start a new project, you could use `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ with preconfigured settings.
 
