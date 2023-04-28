@@ -1,0 +1,6 @@
+Django==4.2
+celery~=5.2.7
+setuptools==67.7.2
+python-dateutil==2.8.2
+django_json_widget
+django-admin-list-filter-dropdown==1.0.3

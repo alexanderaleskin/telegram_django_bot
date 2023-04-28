@@ -140,8 +140,8 @@ def handler_decor(log_type='F', update_user_info=True):
                     # first send error message to user, then raise exception
                     # works for PTB 20.x
                     task = loop.create_task(res)
-                    while not task.done():
-                        pass
+                    # while not task.done():
+                    #     pass
                 except:
                     pass
                 raise raise_error
