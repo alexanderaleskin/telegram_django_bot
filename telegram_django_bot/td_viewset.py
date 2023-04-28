@@ -171,6 +171,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 self.update,
                 message,
                 buttons,
+                **kwargs,
             )
         else:
             raise ValueError(f'unknown chat_action {chat_reply_action} {utrl}, {self.user}')
