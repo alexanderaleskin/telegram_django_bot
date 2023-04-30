@@ -1,4 +1,4 @@
-Telegram Django Bot Bridge
+Telegram Django Bot
 ============================
 
 This library provides a Python high-level interface for creating Telegram Bots. It standardizes the coding in the best
@@ -49,7 +49,7 @@ in settings).
 * Make sure, that ``LANGUAGE_CODE``, ``LANGUAGE_CODE``, ``USE_I18N`` are also used in the library for language localization.
 
 
-4. This step connects ``Telegram Django Bot Bridge`` with ``Python-Telegram-Bot``. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF :
+4. This step connects ``Telegram Django Bot`` with ``Python-Telegram-Bot``. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF :
 
 .. code-block:: python
 
@@ -83,7 +83,7 @@ and Django:
 * Administration panel for management.
 
 
-Telegram Django Bot Bridge provides next special opportunities:
+Telegram Django Bot provides next special opportunities:
 
 * using Viewsets (typical action with model (create, update, list, delete));
 * using Django localization.
@@ -233,7 +233,7 @@ In the example, the list of handlers is specified in the ``add_handlers`` functi
 The example adds 1 super handler ``RouterCallbackMessageCommandHandler``, which allows you to write handlers
 in the style of handling link requests in the same way as it is done in ``Django``. ``RouterCallbackMessageCommandHandler`` allows you to handle
 messages, user commands and button clicks by users. In other words, it replaces the handlers
-``MessageHandler, CommandHandler, CallbackQueryHandler`` . Since the ``Telegram Django Bot Bridge`` library is an extension,
+``MessageHandler, CommandHandler, CallbackQueryHandler`` . Since the ``Telegram Django Bot`` library is an extension,
 it does not prohibit the use of standard handlers of the ``Python-Telegram-Bot`` library for handle user requests.
 (sometimes it is simply necessary, for example, if you need to process responses to surveys (you need to use PollAnswerHandler)).
 
