@@ -577,7 +577,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             buttons = []
             field = self.telega_form.base_fields[next_field]
 
-            mess += self.show_texts_dict['generate_message_next_field'] % {'label': field.label}
+            mess += str(self.show_texts_dict['generate_message_next_field']) % {'label': field.label}
             if field.help_text:
                 mess += f'{field.help_text}\n\n'
 
@@ -591,11 +591,9 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 choices = field.choices
                 if hasattr(choices, 'queryset'):
                     choices = [[x.id, x.name] for x in choices.queryset.select_related()]
-                else:
-                    choices = choices[1:]
 
             choices = self.prechoice_fields_values.get(next_field) \
-                      or list(filter(lambda x: x[0], choices))
+                or list(filter(lambda x: x[0] not in field.empty_values, choices))
 
             selected_variants = []
             if self.form and self.form.is_valid() and next_field in self.form.cleaned_data:
