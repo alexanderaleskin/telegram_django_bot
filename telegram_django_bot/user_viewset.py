@@ -3,11 +3,11 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.utils import translation
 
-from .forms import TelegaModelForm, BaseModelForm, BaseTelegramForm
-from .td_viewset import TelegaViewSet
+from .forms import TelegramModelForm, BaseModelForm, BaseTelegramForm
+from .td_viewset import TelegramViewSet
 
 
-class UserForm(TelegaModelForm):
+class UserForm(TelegramModelForm):
     form_name = _('User')
 
     class Meta:
@@ -34,11 +34,11 @@ class UserForm(TelegaModelForm):
             BaseTelegramForm.save(self, commit=commit)
 
 
-class UserViewSet(TelegaViewSet):
+class UserViewSet(TelegramViewSet):
     actions = ['change', 'show_elem']
 
     queryset = get_user_model().objects.all()
-    telega_form = UserForm
+    model_form = UserForm
     use_name_and_id_in_elem_showing = False
 
     prechoice_fields_values = {
@@ -54,14 +54,14 @@ class UserViewSet(TelegaViewSet):
 
         return self.CHAT_ACTION_MESSAGE, (mess, buttons)
 
-    def generate_value_str(self, model, field, field_name, try_field='name'):
+    def gm_value_str(self, model, field, field_name, try_field='name'):
         if field_name == 'timezone':
             value = getattr(model, field_name, "")
             value = int(value.total_seconds() // 3600)
             return f'+{value} UTC' if value > 0 else f'{value} UTC'
 
         else:
-            return super().generate_value_str(model, field, field_name, try_field)
+            return super().gm_value_str(model, field, field_name, try_field)
 
     def gm_next_field_choice_buttons(self, *args, **kwargs):
         kwargs['self_variant'] = False

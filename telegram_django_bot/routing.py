@@ -1,7 +1,7 @@
 import logging
 from .models import BotMenuElem
 from .utils import handler_decor
-from .td_viewset import TelegaViewSet
+from .td_viewset import TelegramViewSet
 from django.urls import resolve, Resolver404, reverse
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -17,7 +17,7 @@ except ImportError:
     from telegram.ext import Handler
 
 
-def telega_resolve(path, utrl_conf=None):
+def telegram_resolve(path, utrl_conf=None):
     if path[0] != '/':
         path = f'/{path}'
 
@@ -34,7 +34,7 @@ def telega_resolve(path, utrl_conf=None):
     return resolver_match
 
 
-def telega_reverse(viewname, utrl_conf=None, args=None, kwargs=None, current_app=None):
+def telegram_reverse(viewname, utrl_conf=None, args=None, kwargs=None, current_app=None):
     if utrl_conf is None:
         utrl_conf = settings.TELEGRAM_ROOT_UTRLCONF
 
@@ -56,7 +56,7 @@ def all_command_bme_handler(bot, update, user):
                     command__regex=command_split[0] if command_split else '' + "(\r\n|$)",
                     is_visable=True,
                 ).first()
-    return bot.send_botmenuelem(update, user, menu_elem, only_send=True)
+    return bot.send_botmenuelem(update, user, menu_elem)
 
 
 @handler_decor(log_type='C')
@@ -65,7 +65,7 @@ def all_callback_bme_handler(bot, update, user):
         callbacks_db__contains=update.callback_query.data,
         is_visable=True,
     ).first()
-    return bot.send_botmenuelem(update, user, menu_elem, only_send=True)
+    return bot.send_botmenuelem(update, user, menu_elem)
 
 
 class RouterCallbackMessageCommandHandler(Handler):
@@ -80,21 +80,20 @@ class RouterCallbackMessageCommandHandler(Handler):
         callback_func = None
         # check if utrls
         if update.callback_query:
-            callback_func = telega_resolve(update.callback_query.data, self.utrl_conf)
-        # is it ok? seems message couldn't be an url
-        elif update.effective_message.text and update.effective_message.text.startswith('/'):
-            callback_func = telega_resolve(update.effective_message.text, self.utrl_conf)
+            callback_func = telegram_resolve(update.callback_query.data, self.utrl_conf)
+        elif update.effective_message.text and update.message.text.startswith('/'):
+            callback_func = telegram_resolve(update.message.text, self.utrl_conf)
 
         if callback_func is None:
             # update.message -- could be data or info for managing, command could not be a data, it is managing info
-            if not update.effective_message.text or not update.effective_message.text.startswith('/'):
+            if not update.effective_message.text or not update.message.text.startswith('/'):
                 user_details = update.effective_message.from_user
 
                 user = get_user_model().objects.filter(id=user_details.id).first()
                 if user:
                     logging.info(f'user.current_utrl {user.current_utrl}')
                     if user.current_utrl:
-                        callback_func = telega_resolve(user.current_utrl, self.utrl_conf)
+                        callback_func = telegram_resolve(user.current_utrl, self.utrl_conf)
         return callback_func
 
     def check_update(self, update: object):
@@ -108,8 +107,7 @@ class RouterCallbackMessageCommandHandler(Handler):
             if callback:
                 return True
             elif not self.only_utrl:
-                if update.effective_message and update.effective_message.text and update.effective_message.text.startswith(
-                        '/'):
+                if update.effective_message.text and update.message.text.startswith('/'):
                     # if it is a command then it should be  early in handlers
                     # or in BME (then return True
                     return True
@@ -118,18 +116,18 @@ class RouterCallbackMessageCommandHandler(Handler):
         return None
 
     def handle_update(
-            self,
-            update,
-            dispatcher,
-            check_result: object,
-            context=None,
+        self,
+        update,
+        dispatcher,
+        check_result: object,
+        context=None,
     ):
         # todo: add flush utrl and data if viewset utrl change or error
 
         callback_func = self.get_callback_utrl(update)
 
         if callback_func is not None:
-            if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegaViewSet):
+            if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegramViewSet):
                 viewset = callback_func.func(callback_func.route)
                 decorating = handler_decor(log_type='N', )
                 callback_func = decorating(viewset.dispatch)
@@ -147,5 +145,3 @@ class RouterCallbackMessageCommandHandler(Handler):
         return callback_func(update, context)
 
 
-telegram_reverse = telega_reverse
-telegram_resolve = telega_resolve

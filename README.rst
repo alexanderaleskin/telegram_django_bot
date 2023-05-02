@@ -29,7 +29,7 @@ Then you can configure it in your app:
         'telegram_django_bot',
 
         # needed for django admin site
-        'django_json_widget', 
+        'django_json_widget',
         'django_admin_listfilter_dropdown',
     ]
 
@@ -87,7 +87,7 @@ and Django:
 * Web administration panel for management.
 
 
-Telegram Django Bot Bridge provides next special opportunities:
+Telegram Django Bot provides next special opportunities:
 
 * using Viewsets (typical CRUD actions with model though forms (create, update, list, delete));
 * using Django localization (language is dependant of the user's telegram settings).
@@ -102,8 +102,7 @@ Telegram Django Bot Bridge provides next special opportunities:
 
 The key feature of the lib is ``TelegramViewSet`` - a class for managing Django ORM model. It is designed in a
 similar way as `Django rest framework Viewset <https://www.django-rest-framework.org/api-guide/viewsets/>`_ , but has
-a significant difference: while DRF Viewset provides a response in serializable format (usually in json format) to frontend app,
-TelegramViewSet
+a significant difference: while DRF Viewset provides a response in serializable format (usually in json format) to frontend app, TelegramViewSet
 provides a response to the user in telegram interface in message format with buttons. So, you will manage data and receive
 responses in human format by executing TelegramViewSet method. The methods use some kind of templates for generating human
 responses (it is possible to overwrite these templates). By default, TelegramViewSet has 5 methods:
@@ -145,7 +144,7 @@ The next piece of code gives the opportunity for full managing (create, update, 
 
 
     class RequestViewSet(TelegramViewSet):
-        telega_form = RequestForm
+        model_form = RequestForm
         queryset = Request.objects.all()
         viewset_name = 'Request'
 

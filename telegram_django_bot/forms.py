@@ -7,19 +7,34 @@ from django.db import models
 # todo: PreChoise logic to fields
 # todo: support media
 
-# class TelegaErrorList(ErrorList):
+# class TelegramErrorList(ErrorList):
 #     def __str__(self):
 #         return self.as_text()
 #
 
-class TelegaErrorDict(ErrorDict):
+class TelegramErrorDict(ErrorDict):
     def __str__(self):
         return self.as_text()
 
 
 class BaseTelegramForm(BaseForm):
     # field_order = None
-    form_name = ''
+
+    # form_name = ''  # make sure that this name is unique!! It is used for storing in User details while adding or
+    # # updating element attributes.
+    # todo: add check if there are forms with same form_names
+
+    @property
+    def form_name(self) -> str:
+        """ just for easy creating class. So, the name of class should be unique  """
+        return self.__str__()
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}'
+
+    def __str__(self):
+        return f'{self.__class__.__name__}'
+
 
     def _multichoice_intersection(self, set_from_user, set_from_db):
         # todo: in another place should be check with check from field type
@@ -81,7 +96,7 @@ class BaseTelegramForm(BaseForm):
         data = self._init_helper_get_data(user, data)
 
         super().__init__(data, files, initial=initial)
-        # self.error_class = TelegaErrorList
+        # self.error_class = TelegramErrorList
 
         self.fields, self.next_field, self.non_filled_fields = self._init_helper_fields_detection(data)
         self.filled_fields = self.fields
@@ -101,7 +116,7 @@ class BaseTelegramForm(BaseForm):
         """
         Clean all of self.data and populate self._errors and self.cleaned_data.
         """
-        self._errors = TelegaErrorDict()  # only for change TelegaErrorDict()
+        self._errors = TelegramErrorDict()  # only for change TelegramErrorDict()
         if not self.is_bound:  # Stop further processing.
             return
         self.cleaned_data = {}
@@ -144,10 +159,10 @@ class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
                             data[model_field] = data[model_field].all()
                 else:
                     raise ValueError(
-                        f'fields in Telegamodelform should have same name: {model_field}, {instance.__dict__.keys()}')
+                        f'fields in TelegramModelForm should have same name: {model_field}, {instance.__dict__.keys()}')
 
         BaseModelForm.__init__(self, data, files, initial=initial, instance=instance)
-        # self.error_class = TelegaErrorList
+        # self.error_class = TelegramErrorList
 
         self.next_field = None
         self.fields, self.next_field, self.non_filled_fields = self._init_helper_fields_detection(data)
@@ -178,6 +193,3 @@ class TelegramForm(BaseTelegramForm, metaclass=DeclarativeFieldsMetaclass):
 class TelegramModelForm(BaseTelegramModelForm, metaclass=ModelFormMetaclass):
     """just for executing metaclass"""
 
-
-TelegaForm = TelegramForm
-TelegaModelForm = TelegramModelForm

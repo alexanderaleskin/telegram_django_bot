@@ -157,12 +157,14 @@ def handler_decor(log_type='F', update_user_info=True):
 # ButtonPagination WITHOUT WARRANTY
 class ButtonPagination:
     """
-    buttons -- массив кнопок с значением, которые отображать, формат кнопок:
+    construct several pages with buttons
+
+    buttons -- array of buttons with values for display to user, button format:
         [text; value]
-    selected_buttons -- выбранные кнопки в таком же формате
-    header_buttons -- кнопки, которые закреплены сверху на каждой странице и могут вести в другое местое, формат:
-       [text; value; callback_prefix]  -- callback_prefix=None тогда береться self.callback_prefix
-    footer_buttons -- аналогично header_buttons
+    selected_buttons -- selected buttons (add icon)
+    header_buttons -- buttons in the header for navigation or other cases, format:
+       [text; value; callback_prefix]  -- if callback_prefix=None then self.callback_prefix is selected
+    footer_buttons -- same as header_buttons, but in the footer
 
     """
 
@@ -178,7 +180,7 @@ class ButtonPagination:
         self.SELECTED_TICK = '✅ '
         self.PREV_PAGE_STR = '⏮'
         self.NEXT_PAGE_STR = '⏭'
-        self.PAGE_CALLBACK_SYMBOL = 'telega_p'
+        self.PAGE_CALLBACK_SYMBOL = 'telegram_p'
 
         self.callback_prefix = callback_prefix
         self.buttons = buttons
@@ -200,8 +202,9 @@ class ButtonPagination:
 
     def value_page(self, value):
         """
-        выбирает какую страницу отобразить по дефолту
-        :param value:  значени кнопки
+        select the default page for display
+
+        :param value: ???
         :return:
         """
 
@@ -212,20 +215,21 @@ class ButtonPagination:
 
     def _select_page_buttons(self, page_num):
         """
-        выбирает какие кнопки с значениями выбрать
-        :param page_num: Если None, то вызывает _select_page
+        select buttons for display on the page_num page. Func is created for easy logic redefinition.
+        :param page_num: if None, then  _select_page is called
         :return:
         """
         return self.buttons[page_num * self.buttons_per_page: (page_num + 1) * self.buttons_per_page]
 
     def construct_inline_curr_page(self, page_num=None, ):
         """
-        Cтроит inline кнопки (в переписке, не в меню) в формате телеграмм
+        Created  inline buttons
+
         :param page_num:
         :return:
         """
 
-        telega_buttons = []
+        telegram_buttons = []
         if page_num is None:
             if self.selected_values:
                 page_num = self.value_page(self.selected_values[0])
@@ -245,10 +249,10 @@ class ButtonPagination:
 
             if col_index == 0:
                 # new row
-                telega_buttons.append([button_telegram])
+                telegram_buttons.append([button_telegram])
             else:
                 # add in last row
-                telega_buttons[-1].append(button_telegram)
+                telegram_buttons[-1].append(button_telegram)
 
             col_index += 1
             if col_index == self.columns:
@@ -267,9 +271,9 @@ class ButtonPagination:
                 inlinebutt(self.NEXT_PAGE_STR, callback_data=callback_data)
             )
         if neighbor_buttons:
-            telega_buttons.append(neighbor_buttons)
+            telegram_buttons.append(neighbor_buttons)
 
-        return telega_buttons
+        return telegram_buttons
 
 
 class CalendarPagination:

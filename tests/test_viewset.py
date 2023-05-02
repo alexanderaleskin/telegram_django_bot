@@ -1,5 +1,5 @@
 from telegram_django_bot.test import TD_TestCase
-from telegram_django_bot.routing import telega_reverse, RouterCallbackMessageCommandHandler
+from telegram_django_bot.routing import telegram_reverse, RouterCallbackMessageCommandHandler
 from django.conf import settings
 
 from test_app.models import Entity, Order, Size, User, Category
@@ -9,22 +9,22 @@ import unittest
 import telegram
 
 
-class TestTelegaViewSet(TD_TestCase):
+class TestTelegramViewSet(TD_TestCase):
     def setUp(self) -> None:
         user_id = settings.TELEGRAM_TEST_USER_IDS[0]
         self.user = User.objects.create(id=user_id, username=user_id)
         self.cvs = CategoryViewSet(
-            telega_reverse('CategoryViewSet'),
+            telegram_reverse('CategoryViewSet'),
             user=self.user,
             bot=self.test_callback_context.bot
         )
         self.evs = EntityViewSet(
-            telega_reverse('EntityViewSet'),
+            telegram_reverse('EntityViewSet'),
             user=self.user,
             bot=self.test_callback_context.bot
         )
         self.ovs = OrderViewSet(
-            telega_reverse('OrderViewSet'),
+            telegram_reverse('OrderViewSet'),
             user=self.user,
             bot=self.test_callback_context.bot
         )
@@ -722,7 +722,7 @@ class TestUserViewSet(TD_TestCase):
         self.assertEqual(buttons[0][0]['callback_data'], f'us/up&{self.user.id}&timezone')
         self.assertEqual(buttons[0][1]['text'], '🔄 Language')
         self.assertEqual(buttons[0][1]['callback_data'], f'us/up&{self.user.id}&telegram_language_code')
-        self.assertEqual(res_message.text, 'Timezone: 3:00:00\nLanguage: English')
+        self.assertEqual(res_message.text, 'Timezone: +3 UTC\nLanguage: English')
 
     def test_change_language(self):
         start = self.create_update({'text': '/start'})
