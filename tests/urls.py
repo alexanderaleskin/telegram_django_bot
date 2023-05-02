@@ -5,6 +5,6 @@ from django.urls import path, include
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
-    # path('', include(('telega_bot.urls', 'base'), namespace='main')),
+    # path('', include(('telegram_bot.urls', 'base'), namespace='main')),
 
 ]

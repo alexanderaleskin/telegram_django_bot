@@ -1,4 +1,3 @@
-# from bot_conf.celery import app
 from django.conf import settings
 
 from django.utils import timezone
@@ -10,7 +9,6 @@ from django.contrib.auth import get_user_model
 from .models import Trigger, UserTrigger, ActionLog
 from .tg_dj_bot import TG_DJ_Bot
 from celery import current_app
-# from .utils import send_botmenuelem, task_send_message_handler
 
 
 @current_app.task
@@ -85,7 +83,7 @@ def create_triggers():
 
         users = users.annotate(exist_trigger=Exists(user_triggers)).filter(exist_trigger=False)
 
-        # todo: пересечение с другими триггерами -- минимальное время между триггерами сделать?
+        # todo: intersection with other triggers -- minimum time between triggers to do?
 
         UserTrigger.objects.bulk_create([
             UserTrigger(trigger=trigger, user=user) for user in users
@@ -109,7 +107,7 @@ def send_triggers(user_ids):
     UserTrigger.objects.filter(
         is_sent=False,
         user_id__in=user_ids,
-        dttm_added__lt=dttm_now - timezone.timedelta(hours=16),  # триггеры  не присланные в первые 16 часов удаляем
+        dttm_added__lt=dttm_now - timezone.timedelta(hours=16),  # triggers not sent in the first 16 hours are deleted
     ).update(dttm_deleted=dttm_now)
 
     user_triggers = UserTrigger.objects.filter(
@@ -129,7 +127,7 @@ def send_triggers(user_ids):
             _send_wrapper,
             user_trigger.user,
             None,
-            user_trigger.user,  # для task_send_message_handler и для send_botmenuelem
+            user_trigger.user,  # for task_send_message_handler и для send_botmenuelem
             user_trigger.trigger.botmenuelem
         )
         if is_sent:

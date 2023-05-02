@@ -1,4 +1,4 @@
-from telegram_django_bot.td_viewset import TelegaViewSet
+from telegram_django_bot.td_viewset import TelegramViewSet
 from .models import Category, Entity, Order
 from .forms import CategoryForm, EntityForm, OrderForm
 from telegram_django_bot.telegram_lib_redefinition import InlineKeyboardButtonDJ
@@ -7,10 +7,10 @@ from django.db import models
 from .permissions import CategoryPermission
 
 
-class CategoryViewSet(TelegaViewSet):
+class CategoryViewSet(TelegramViewSet):
     permission_classes = [CategoryPermission]
     command_routing_show_options = 'aaa'
-    telega_form = CategoryForm
+    model_form = CategoryForm
     queryset = Category.objects.all()
     viewset_name = _('Category')
 
@@ -20,8 +20,8 @@ class CategoryViewSet(TelegaViewSet):
     )
 
     generate_function_main_mess = {
-        # 'generate_message_next_field': '\n',
-        'generate_message_success_created': 'ff %(viewset_name)s\n\n',
+        # 'gm_next_field': '\n',
+        'gm_success_created': 'ff %(viewset_name)s\n\n',
     }
 
     prechoice_fields_values = {
@@ -43,19 +43,19 @@ class CategoryViewSet(TelegaViewSet):
         return super().show_elem(model, mess)
 
 
-class EntityViewSet(TelegaViewSet):
+class EntityViewSet(TelegramViewSet):
     command_routing_show_options = 'aaa'
-    telega_form = EntityForm
+    model_form = EntityForm
     queryset = Entity.objects.all()
     viewset_name = _('Entity')
 
     meta_texts_dict = {
-        'generate_message_next_field': _('Redefine %(label)s\n\n'),
+        'gm_next_field': _('Redefine %(label)s\n\n'),
     }
 
 
-class OrderViewSet(TelegaViewSet):
-    telega_form = OrderForm
+class OrderViewSet(TelegramViewSet):
+    model_form = OrderForm
     queryset = Order.objects.all()
     viewset_name = 'Order'
     foreign_filter_amount = 1  # [entity_id]

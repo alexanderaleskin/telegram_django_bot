@@ -4,7 +4,7 @@ from telegram_django_bot import forms as td_forms
 from .models import Category, Entity, Order
 
 
-class CategoryForm(td_forms.TelegaModelForm):
+class CategoryForm(td_forms.TelegramModelForm):
     form_name = gettext_lazy('Category')
 
     class Meta:
@@ -21,7 +21,7 @@ class CategoryForm(td_forms.TelegaModelForm):
         }
 
 
-class EntityForm(td_forms.TelegaModelForm):
+class EntityForm(td_forms.TelegramModelForm):
     form_name = 'Entity'
 
     class Meta:
@@ -34,7 +34,7 @@ class EntityForm(td_forms.TelegaModelForm):
         }
 
 
-class OrderForm(td_forms.TelegaModelForm):
+class OrderForm(td_forms.TelegramModelForm):
     form_name = 'Order'
 
     entities = forms.ModelMultipleChoiceField(queryset=Entity.objects.all().order_by('-id'), required=False, label='Entities')
