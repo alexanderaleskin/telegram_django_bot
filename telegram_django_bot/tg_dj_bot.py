@@ -21,6 +21,7 @@ from .telegram_lib_redefinition import (
     BotDJ,
     # TelegramDjangoObject2Json,
 )
+import asyncio
 
 
 class TG_DJ_Bot(BotDJ):
@@ -49,12 +50,12 @@ class TG_DJ_Bot(BotDJ):
         )
         return res_mess
 
-    def send_botmenuelem(bot, update, user, menu_elem):
+    def send_botmenuelem(bot, update, user, menu_elem, **kwargs):
         if menu_elem is None:
             menu_elem = BotMenuElem.objects.filter(empty_block=True, is_visable=True).first()
 
         media_files_list = None
-        extra_kwargs = {}
+        extra_kwargs = kwargs
 
         if menu_elem is None:
             if settings.USE_I18N:
@@ -185,8 +186,9 @@ class TG_DJ_Bot(BotDJ):
             else:
                 is_editing_message = True
 
+        delete_response = None
         if delete_message_id:
-            bot.delete_message(chat_id, delete_message_id)
+            delete_response = bot.delete_message(chat_id, delete_message_id)
 
         if is_editing_message:
             edit_message_id = update.callback_query.message.message_id
@@ -264,12 +266,17 @@ class TG_DJ_Bot(BotDJ):
         if type(response) == Message:
             media_file = response.document or response.audio or response.video or response.animation
             if media_file is None and response.photo:
-                media_file = response.photo[-1] # last -- biggest
+                media_file = response.photo[-1]  # last -- biggest
             if media_file:
                 media_files_codes.append(media_file.file_id)
 
             # todo: add support for group media
+        if asyncio.iscoroutine(delete_response):
+            async def helper():
+                await delete_response
+                await response
 
+            return helper(), media_files_codes
         return response, media_files_codes
 
     def task_send_message_handler(bot, user, func, func_args=(), func_kwargs={}):

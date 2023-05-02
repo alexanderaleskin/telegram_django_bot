@@ -56,7 +56,7 @@ def all_command_bme_handler(bot, update, user):
                     command__regex=command_split[0] if command_split else '' + "(\r\n|$)",
                     is_visable=True,
                 ).first()
-    return bot.send_botmenuelem(update, user, menu_elem)
+    return bot.send_botmenuelem(update, user, menu_elem, only_send=True)
 
 
 @handler_decor(log_type='C')
@@ -65,7 +65,7 @@ def all_callback_bme_handler(bot, update, user):
         callbacks_db__contains=update.callback_query.data,
         is_visable=True,
     ).first()
-    return bot.send_botmenuelem(update, user, menu_elem)
+    return bot.send_botmenuelem(update, user, menu_elem, only_send=True)
 
 
 class RouterCallbackMessageCommandHandler(Handler):

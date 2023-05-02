@@ -171,6 +171,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 self.update,
                 message,
                 buttons,
+                **kwargs,
             )
         else:
             raise ValueError(f'unknown chat_action {chat_reply_action} {utrl}, {self.user}')
@@ -452,6 +453,18 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             is_elem = kwargs['full_show']
 
         mess = ''
+
+        # honor field_order
+        if self.telega_form.field_order is not None:
+            fields = {}
+            for key in self.telega_form.field_order:
+                try:
+                    fields[key] = self.telega_form.base_fields.pop(key)
+                except KeyError:  # ignore unknown fields
+                    pass
+            fields.update(self.telega_form.base_fields)  # add remaining fields in original order
+            self.telega_form.base_fields = fields
+
         for field_name, field in self.telega_form.base_fields.items():
             if type(field.widget) != HiddenInput:
                 mess += f'<b>{field.label}</b>: {self.gm_value_str(model, field, field_name)}\n'
@@ -576,7 +589,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             buttons = []
             field = self.telega_form.base_fields[next_field]
 
-            mess += self.show_texts_dict['generate_message_next_field'] % {'label': field.label}
+            mess += str(self.show_texts_dict['generate_message_next_field']) % {'label': field.label}
             if field.help_text:
                 mess += f'{field.help_text}\n\n'
 
@@ -590,11 +603,9 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
                 choices = field.choices
                 if hasattr(choices, 'queryset'):
                     choices = [[x.id, x.name] for x in choices.queryset.select_related()]
-                else:
-                    choices = choices[1:]
 
             choices = self.prechoice_fields_values.get(next_field) \
-                      or list(filter(lambda x: x[0], choices))
+                or list(filter(lambda x: x[0] not in field.empty_values, choices))
 
             selected_variants = []
             if self.form and self.form.is_valid() and next_field in self.form.cleaned_data:
@@ -672,7 +683,6 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             current_utrl = self.gm_callback_data(func_response, instance_id, field_name)
         else:
             current_utrl = self.gm_callback_data(func_response, field_name)
-
 
         self.user.current_utrl = current_utrl
         self.user.save()
