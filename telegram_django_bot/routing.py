@@ -77,24 +77,19 @@ class RouterCallbackMessageCommandHandler(Handler):
         self.only_utrl = only_utrl  # without BME elems
 
     def get_callback_utrl(self, update):
-        callback_func = None
         # check if utrls
         if update.callback_query:
-            callback_func = telegram_resolve(update.callback_query.data, self.utrl_conf)
+            return telegram_resolve(update.callback_query.data, self.utrl_conf)
         elif update.message and update.message.text and update.message.text.startswith('/'):
-            callback_func = telegram_resolve(update.message.text, self.utrl_conf)
+            return telegram_resolve(update.message.text, self.utrl_conf)
 
-        if callback_func is None:
-            # update.message -- could be data or info for managing, command could not be a data, it is managing info
-            if not update.message.text or not update.message.text.startswith('/'):
-                user_details = update.effective_message.from_user
-
-                user = get_user_model().objects.filter(id=user_details.id).first()
-                if user:
-                    logging.info(f'user.current_utrl {user.current_utrl}')
-                    if user.current_utrl:
-                        callback_func = telegram_resolve(user.current_utrl, self.utrl_conf)
-        return callback_func
+        # update.message -- could be data or info for managing, command could not be a data, it is managing info
+        user_details = update.effective_message.from_user
+        user = get_user_model().objects.filter(id=user_details.id).first()
+        if user:
+            logging.info(f'user.current_utrl {user.current_utrl}')
+            if user.current_utrl:
+                return telegram_resolve(user.current_utrl, self.utrl_conf)
 
     def check_update(self, update: object):
         """
@@ -103,17 +98,12 @@ class RouterCallbackMessageCommandHandler(Handler):
         :return:
         """
         if isinstance(update, Update) and (update.effective_message or update.callback_query):
-            callback = self.get_callback_utrl(update)
+            self.callback = callback = self.get_callback_utrl(update)
             if callback:
                 return True
             elif not self.only_utrl:
-                if update.effective_message.text and update.message.text.startswith('/'):
-                    # if it is a command then it should be  early in handlers
-                    # or in BME (then return True
+                if update.callback_query or (update.message and update.message.text and update.message.text.startswith('/')):
                     return True
-                elif update.callback_query:
-                    return True
-        return None
 
     def handle_update(
         self,
@@ -123,25 +113,15 @@ class RouterCallbackMessageCommandHandler(Handler):
         context=None,
     ):
         # todo: add flush utrl and data if viewset utrl change or error
-
-        callback_func = self.get_callback_utrl(update)
-
-        if callback_func is not None:
-            if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegramViewSet):
-                viewset = callback_func.func(callback_func.route)
+        if self.callback:
+            if inspect.isclass(self.callback.func) and issubclass(self.callback.func, TelegramViewSet):
+                viewset = self.callback.func(self.callback.route)
                 decorating = handler_decor(log_type='N', )
-                callback_func = decorating(viewset.dispatch)
+                return decorating(viewset.dispatch)(update, context)
             else:
-                callback_func = callback_func.func
-
+                return self.callback.func(update, context)
         # check if in BME (we do not need check only_utrl here, as there was a check in self.check_update)
-        if callback_func is None:
-            if update.callback_query:
-                callback_func = all_callback_bme_handler
-            else:
-                callback_func = all_command_bme_handler
-
-        self.collect_additional_context(context, update, dispatcher, check_result)
-        return callback_func(update, context)
-
-
+        elif update.callback_query:
+            return all_callback_bme_handler(update, context)
+        else:
+            return all_command_bme_handler(update, context)
