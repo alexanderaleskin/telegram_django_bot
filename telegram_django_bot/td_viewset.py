@@ -47,9 +47,10 @@ class TelegramViewSetMetaClass(type):
 
 
 class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
-    permission_classes = [PermissionAllowAny]
-    actions = ['create', 'change', 'delete', 'show_elem', 'show_list']
+    permission_classes = [PermissionAllowAny]   # in dispatch function check permission for calling action with args
+    actions = ['create', 'change', 'delete', 'show_elem', 'show_list']  # actions of the class
 
+    # utrl for actions
     command_routing_create = 'cr'
     command_routing_change = 'up'
     command_routing_delete = 'de'
@@ -67,7 +68,7 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
     model_form = None
 
     queryset = None
-    viewset_name = ''
+    # viewset_name = ''  # used in message for user, redefined as property by default
     foreign_filter_amount = 0
 
     prechoice_fields_values = {}
@@ -120,6 +121,18 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
             self.viewset_routing[self.command_routings[cr_action]] = self.__getattribute__(action)
 
         self.prefix = prefix.replace('^', '').replace('$', '')
+
+    @property
+    def viewset_name(self) -> str:
+        """ just for easy creating class """
+        return self.__str__()
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}'
+
+    def __str__(self):
+        return f'{self.__class__.__name__}'
+
 
     # Entrance and exit of the class:
     # dispatch gets info about user action, checks permissions, selects and executes function

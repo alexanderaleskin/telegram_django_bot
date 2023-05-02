@@ -19,7 +19,22 @@ class TelegramErrorDict(ErrorDict):
 
 class BaseTelegramForm(BaseForm):
     # field_order = None
-    form_name = ''
+
+    # form_name = ''  # make sure that this name is unique!! It is used for storing in User details while adding or
+    # # updating element attributes.
+    # todo: add check if there are forms with same form_names
+
+    @property
+    def form_name(self) -> str:
+        """ just for easy creating class. So, the name of class should be unique  """
+        return self.__str__()
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}'
+
+    def __str__(self):
+        return f'{self.__class__.__name__}'
+
 
     def _multichoice_intersection(self, set_from_user, set_from_db):
         # todo: in another place should be check with check from field type
