@@ -86,7 +86,7 @@ class RouterCallbackMessageCommandHandler(Handler):
 
         if callback_func is None:
             # update.message -- could be data or info for managing, command could not be a data, it is managing info
-            if not update.effective_message.text or not update.message.text.startswith('/'):
+            if not update.message.text or not update.message.text.startswith('/'):
                 user_details = update.effective_message.from_user
 
                 user = get_user_model().objects.filter(id=user_details.id).first()
