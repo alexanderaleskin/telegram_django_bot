@@ -88,8 +88,7 @@ class BaseTelegramForm(BaseForm):
         #     filled_fields[first_field_couple[0]] = first_field_couple[1]
 
         next_field = not_filled_fields[0] if len(not_filled_fields) else None
-        return  filled_fields, next_field
-
+        return filled_fields, next_field, not_filled_fields
 
     def __init__(self, user, data=None, files=None, initial=None):
 
@@ -99,7 +98,8 @@ class BaseTelegramForm(BaseForm):
         super().__init__(data, files, initial=initial)
         # self.error_class = TelegramErrorList
 
-        self.fields, self.next_field = self._init_helper_fields_detection(data)
+        self.fields, self.next_field, self.non_filled_fields = self._init_helper_fields_detection(data)
+        self.filled_fields = self.fields
 
     def save(self, commit=True):
         """ save temp data to user data"""
@@ -131,7 +131,7 @@ class BaseTelegramForm(BaseForm):
 
 
 class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
-    def __init__(self, user, data=None, files=None, initial=None, instance=None):
+    def __init__(self, user, data={}, files=None, initial=None, instance=None):
         self.user = user
         if instance is None:
             data = self._init_helper_get_data(user, data)
@@ -165,7 +165,8 @@ class BaseTelegramModelForm(BaseTelegramForm, BaseModelForm):
         # self.error_class = TelegramErrorList
 
         self.next_field = None
-        self.fields, self.next_field = self._init_helper_fields_detection(data)
+        self.fields, self.next_field, self.non_filled_fields = self._init_helper_fields_detection(data)
+        self.filled_fields = self.fields
 
     def save(self, commit=True, is_completed=True):
         """

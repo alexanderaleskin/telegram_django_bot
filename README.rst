@@ -1,9 +1,9 @@
-Telegram Django Bot
+Telegram Django Bot Bridge
 ============================
 
-This library provides a Python high-level interface for creating Telegram Bots. It standardizes the coding in the best
-practice of the web development. The library is based on `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_.
-It also provides viewset interface for managing data with.
+This library provides a Python high-level interface for creating Telegram Bots using Django. It standardizes the coding in the best
+practice of the web development. Based on `Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_,
+it provides viewset interface for managing data alongside forms for interaction with Django model classes.
 
 If you start a new project, you could use `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ with preconfigured settings.
 
@@ -27,11 +27,16 @@ Then you can configure it in your app:
     INSTALLED_APPS = [
         ...
         'telegram_django_bot',
-        'django_json_widget', # needed for django admin site
+
+        # needed for django admin site
+        'django_json_widget',
+        'django_admin_listfilter_dropdown',
     ]
 
+.. important::
 
-If you are planning to use Django in asynchronous mode, then you need to set ``DJANGO_ALLOW_ASYNC_UNSAFE = True`` (otherwise DB writings will be failed).
+        If you are planning to use Django in asynchronous mode, then you need to set ``DJANGO_ALLOW_ASYNC_UNSAFE = True`` (otherwise DB writings will be failed).
+        This is extremely important when using PTB version above 20.
 
 
 2. Run ``python manage.py migrate`` to create the telegram_django_bot models (checked that the ``AUTH_USER_MODEL`` selected
@@ -46,10 +51,11 @@ in settings).
 
 * ``TELEGRAM_TOKEN`` - for adding "triggers",
 * ``TELEGRAM_TEST_USER_IDS`` - for adding tests for your bot,
-* Make sure, that ``LANGUAGE_CODE``, ``LANGUAGE_CODE``, ``USE_I18N`` are also used in the library for language localization.
+* Make sure, that ``LANGUAGE_CODE``, ``USE_I18N`` are also used in the library for language localization.
 
 
-4. This step connects ``Telegram Django Bot`` with ``Python-Telegram-Bot``. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF :
+4. This step connects ``Telegram Django Bot Bridge`` with ``Python-Telegram-Bot``. Add ``RouterCallbackMessageCommandHandler`` in handlers for using TELEGRAM_ROOT_UTRLCONF :
+
 
 .. code-block:: python
 
@@ -58,14 +64,12 @@ in settings).
 
 or in 20.x version :
 
+
 .. code-block:: python
 
     bot = TG_DJ_Bot(settings.TELEGRAM_TOKEN)
     application = ApplicationBuilder().bot(bot).build()
     application.add_handler(RouterCallbackMessageCommandHandler())
-
-    
-
 
 
 Quick start
@@ -80,16 +84,19 @@ Normally, Python-Telegram-Bot gives the next opportunities for bot creation:
 and Django:
 
 * Django ORM  (communication with Database);
-* Administration panel for management.
+* Web administration panel for management.
 
 
 Telegram Django Bot provides next special opportunities:
 
-* using Viewsets (typical action with model (create, update, list, delete));
-* using Django localization.
-* using function routing like urls routing in Django.
-* creating general menu items with no-coding (through Django Admin Panel);
+* using Viewsets (typical CRUD actions with model though forms (create, update, list, delete));
+* using Django localization (language is dependant of the user's telegram settings).
+* using Django url-like routing style.
+* manage entire menu interfaces with no-coding (through Django Admin Panel);
 * collecting stats from user actions in the bot;
+* class-based permissions control
+* single handler can runs any message type
+* automatic static messages sending using celery-beat based on user actions log
 * other useful staff.
 
 
@@ -102,8 +109,8 @@ responses (it is possible to overwrite these templates). By default, TelegramVie
 
 * ``create`` - create a new instance of the specified ORM model;
 * ``change`` - update instance fields of specified ORM model;
-* ``show_elem`` - show fields of the element and buttons with actions of this instance;
-* ``show_list`` - show list of model elements (with pagination);
+* ``show_elem`` - show element a fields and buttons with actions of this instance;
+* ``show_list`` - list model elements (with pagination);
 * ``delete`` - delete the instance
 
 
@@ -112,8 +119,10 @@ So, if, for example, you have a model of some *request* in your project:
 .. code-block:: python
 
     from django.db import models
+    from django.contrib.auth import get_user_model
 
     class Request(models.Model):
+        client = models.ForeignKey(get_user_model(), on_delete=models.RESTRICT)
         text = models.TextField()
         importance_level = models.PositiveSmallIntegerField()  # for example it will be integer field
         project = models.ForeignKey('Project', on_delete=models.CASCADE)
@@ -143,16 +152,44 @@ The next piece of code gives the opportunity for full managing (create, update, 
 If you need, you can add extra actions to RequestViewSet for managing (see details information below) or change existing functions.
 There are several parameters and secondary functions in TelegramViewSet for customizing logic if it is necessary.
 
+Every instance of ``TelegramViewSet`` has a parameter ``user`` and another one ``update`` representing the telegram
+user who actually invoked the bot function and the telegram update object associated. So let's say you need to filter
+the requests, to list only those one belonging to an user would be like this:
+
+.. code-block:: python
+
+    from telegram_django_bot import forms as td_forms
+    from telegram_django_bot.td_viewset import TelegramViewSet
+
+
+    class RequestForm(td_forms.TelegramModelForm):
+        class Meta:
+            model = Request
+            fields = ['text', 'importance_level', 'project', 'tags']
+
+
+    class RequestViewSet(TelegramViewSet):
+        model_form = RequestForm
+        queryset = Request.objects.all()
+        viewset_name = 'Request'
+
+        def get_queryset(self):
+            return self.queryset.filter(client=self.user).all()
+
+
+
+
 In this example, ``TelegramModelForm`` was used. TelegramModelForm is a descendant of Django ModelForm. So, you could use
-labels, clean functions and other parameters and functions for managing logic and displaying.
+labels, clean, order functions and other parameters and functions for managing logic and displaying.
 
 
 TelegramViewSet is designed to answer next user actions: clicking buttons and sometimes sending messages. The library imposes
 `Django URL notation <https://docs.djangoproject.com/en/4.1/topics/http/urls/>`_ for mapping user actions to TelegramViewSet methods (or usual handlers).
 Usually, for correct mapping you just need to set ``TELEGRAM_ROOT_UTRLCONF`` and use ``RouterCallbackMessageCommandHandler`` in
-dispatcher as it is mentioned above in the *Install paragraph*.
+dispatcher/application as it is mentioned above in the *Install paragraph*.
 
 For correct mapping *RequestViewSet*  you should write in the TELEGRAM_ROOT_UTRLCONF file something like this:
+
 
 .. code-block:: python
 
@@ -160,7 +197,7 @@ For correct mapping *RequestViewSet*  you should write in the TELEGRAM_ROOT_UTRL
     from .views import RequestViewSet
 
     urlpatterns = [
-        re_path(r"^rv/", RequestViewSet, name='RequestViewSet'),
+        re_path(r"^rv/", RequestViewSet, name=RequestViewSet.viewset_name),
     ]
 
 From this point, you can use buttons with callback data "rv/<function_code>" for function calling. For example:
@@ -181,7 +218,7 @@ Deep in details
 
 In this chapter, we will analyze how everything works. The main task of the library is to unify the code and
 provide frequently used functions for developing a bot, that is why a lot of logic is based on resources and paradigms
-of Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_ . Let's analyze
+of Django <https://www.djangoproject.com/>`_ and `Python-Telegram-Bot <https://python-telegram-bot.org/>`_ . You can analyze
 key features of the library on the example of `Telegram django bot template <https://github.com/alexanderaleskin/telergam_django_bot_template>`_ .
 
 .. important::
@@ -192,6 +229,8 @@ key features of the library on the example of `Telegram django bot template <htt
 Since Telegram bots are designed as a tool for responding to user requests, writing a bot begins
 from the user request handler. For this, the standard tools of the Python-Telegram-Bot library are used ﹣
 ``telegram.ext.Update``:
+
+
 
 .. code-block:: python
 
@@ -208,6 +247,52 @@ from the user request handler. For this, the standard tools of the Python-Telegr
      if __name__ == '__main__':
          main()
 
+For versions 20.x or higher of python-telegram-bot would be like this:
+
+
+.. code-block:: python
+
+    from telegram.ext import ApplicationBuilder
+    import os, django
+    from telegram.request import HTTPXRequest
+
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bot_conf.settings')
+    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+    django.setup()
+
+    from telegram_django_bot.tg_dj_bot import TG_DJ_Bot
+    from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
+
+    from traficarius.settings import TELEGRAM_TOKEN, TELEGRAM_LOG, DEBUG
+    import logging
+
+
+    def main():
+        if not DEBUG:
+            logging.basicConfig(
+                # filename=TELEGRAM_LOG,
+                # filemode='a',
+                format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                datefmt='%Y.%m.%d %H:%M:%S',
+                level=logging.INFO
+            )
+
+        proxy_url = 'http://127.0.0.1:3128'
+        request1 = HTTPXRequest(proxy_url=proxy_url)
+        request2 = HTTPXRequest(proxy_url=proxy_url)
+        bot = TG_DJ_Bot(TELEGRAM_TOKEN, request=request1, get_updates_request=request2)
+        # if no proxy uncomment line below
+        # bot = TG_DJ_Bot(TELEGRAM_TOKEN)
+        application = ApplicationBuilder().bot(bot).build()
+        application.add_handler(RouterCallbackMessageCommandHandler())
+        application.run_polling()
+
+
+    if __name__ == '__main__':
+        main()
+
+
+
 
 As indicated in the example, to run the bot (Update) you need to specify a few things (the ``Python-Telegram-Bot`` library standard):
 
@@ -215,25 +300,12 @@ As indicated in the example, to run the bot (Update) you need to specify a few t
 of the ``telegram.Bot`` class is used. It has additional functionality for convenience (we will return to it later);
 2. Handlers that will be called in response to user requests.
 
-In the example, the list of handlers is specified in the ``add_handlers`` function:
-
-
-
-.. code-block:: python
-
-     from telegram_django_bot.routing import RouterCallbackMessageCommandHandler
-
-     ...
-
-     def add_handlers(updater: Updater):
-         dp=updater.dispatcher
-         dp.add_handler(RouterCallbackMessageCommandHandler())
-
+In the example, the list of handlers is specified in the ``add_handlers`` function.
 
 The example adds 1 super handler ``RouterCallbackMessageCommandHandler``, which allows you to write handlers
 in the style of handling link requests in the same way as it is done in ``Django``. ``RouterCallbackMessageCommandHandler`` allows you to handle
 messages, user commands and button clicks by users. In other words, it replaces the handlers
-``MessageHandler, CommandHandler, CallbackQueryHandler`` . Since the ``Telegram Django Bot`` library is an extension,
+``MessageHandler, CommandHandler, CallbackQueryHandler`` . Since the ``Telegram Django Bot Bridge`` library is an extension,
 it does not prohibit the use of standard handlers of the ``Python-Telegram-Bot`` library for handle user requests.
 (sometimes it is simply necessary, for example, if you need to process responses to surveys (you need to use PollAnswerHandler)).
 
@@ -243,6 +315,7 @@ The ``TELEGRAM_ROOT_UTRLCONF`` (same as ``ROOT_URLCONF`` for WEB) attribute is u
 
 
 ``bot_conf.settings.py``:
+
 
 .. code-block:: python
 
@@ -291,7 +364,7 @@ There is following code in the specified included file ``base.utrls.py`` :
 
 So, the end handlers (which are defined in the ``base.views.py`` file) are specified here. Thus, if
 user in the bot writes the command ``/start``, then ``Updater`` receives a message about the user's action and selects
-the appropriate for the request handler ``RouterCallbackMessageCommandHandler`` from a set of handlers. Then the
+the appropriate for the request handler ``RouterCallbackMessageCommandHandler`` from a set of handlers. At that time the
 handler ``RouterCallbackMessageCommandHandler`` searches the appropriate for string ``/start`` path in ``utrls`` and
 finds a suitable path ``'' + 'start'``, and then executes corresponding start function.
 
@@ -307,7 +380,7 @@ the Django ORM database model. ``TelegramViewSet`` has 5 functions for managing 
 
 
 ========= ======== ===========================
- Метод     UTRL      Description
+ Method    UTRL      Description
 --------- -------- ---------------------------
 create     cr       Create model
 change     up       Change model attributes
@@ -518,12 +591,12 @@ you need to add the following lines in the class:
 Where ``actions`` defines the list of available methods and ``command_routing_<method>`` defines the path (url; short name) of the method.
 
 As noted above, the ``dispatch`` method performs a permissions check by calling the ``has_permissions`` method.
-The check is performed by the classes specified in ``permission_classes`` and the default class is ``AllowAny``:
+The check is performed by the classes specified in ``permission_classes`` and the default class is ``PermissionAllowAny``:
 
 .. code-block:: python
 
     class TelegramViewSet:
-        permission_classes = [AllowAny]
+        permission_classes = [PermissionAllowAny]
 
 
 

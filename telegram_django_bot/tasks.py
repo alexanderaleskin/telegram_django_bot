@@ -1,3 +1,4 @@
+# from bot_conf.celery import app
 from django.conf import settings
 
 from django.utils import timezone
@@ -100,7 +101,6 @@ def create_triggers():
             send_triggers.delay(trig_users)
 
 
-
 @current_app.task
 def send_triggers(user_ids):
     dttm_now = timezone.now()
@@ -124,11 +124,11 @@ def send_triggers(user_ids):
     sent_user_triggers = []
     for user_trigger in user_triggers:
         is_sent, res_mess = bot.task_send_message_handler(
-            _send_wrapper,
             user_trigger.user,
-            None,
-            user_trigger.user,  # for task_send_message_handler и для send_botmenuelem
-            user_trigger.trigger.botmenuelem
+            _send_wrapper,
+            func_kwargs={'update': None,
+                         'user': user_trigger.user,  # for task_send_message_handler и для send_botmenuelem
+                         'menu_elem': user_trigger.trigger.botmenuelem}
         )
         if is_sent:
             sent_user_triggers.append(user_trigger)
@@ -140,5 +140,3 @@ def send_triggers(user_ids):
             user_id=x.user_id
         ) for x in sent_user_triggers
     ])
-
-

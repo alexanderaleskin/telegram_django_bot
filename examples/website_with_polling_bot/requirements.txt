@@ -1,0 +1,14 @@
+celery==5.1.2
+Django>=3.1
+django-admin-list-filter-dropdown==1.0.2
+django-celery-results==2.2.0
+django-celerybeat-status==0.0.10
+django-celery-beat==2.2.1
+django-environ==0.4.5
+django-json-widget==1.1.1
+kombu==5.1.0
+psycopg2-binary==2.9.3
+redis==3.3.11
+uwsgi==2.0.20
+python-telegram-bot>=13.15
+telegram_django_bot>=1.0.2

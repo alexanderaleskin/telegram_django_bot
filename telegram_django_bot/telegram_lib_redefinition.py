@@ -1,12 +1,10 @@
 import json
 from telegram import (
-    # TelegramObject,
     Bot,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     KeyboardButton,
 )
-
 
 try:
     # version 20.x +
@@ -23,7 +21,7 @@ def dj_translate_obj_2_string(obj):
     elif hasattr(obj, '__call__'):
         return obj.__call__()
 
-    return None # if it is not django translate object
+    return None  # if it is not django translate object
 
 
 class TelegramDjangoEncoder(json.JSONEncoder):
@@ -41,7 +39,6 @@ class TelegramDjangoObject2Json:
         # for old versions
         return json.dumps(self.to_dict(), cls=TelegramDjangoEncoder)
 
-
     def _get_attrs(self, *args, **kwargs):
         # for new 20.x+ versions
 
@@ -51,7 +48,6 @@ class TelegramDjangoObject2Json:
             if res is not None:
                 data[key] = res
         return data
-
 
 
 class InlineKeyboardMarkupDJ(TelegramDjangoObject2Json, InlineKeyboardMarkup):
@@ -84,7 +80,6 @@ class BotDJ(TelegramDjangoObject2Json, Bot):
                 data[field] = str(data[field])
         return data
 
-
     def _message(
             self,
             endpoint: str,
@@ -107,11 +102,11 @@ class BotDJ(TelegramDjangoObject2Json, Bot):
         )
 
     async def _do_post(
-        self,
-        endpoint: str,
-        data,
-        *args,
-        **kwargs,
+            self,
+            endpoint: str,
+            data,
+            *args,
+            **kwargs,
     ):
         """
         this method used in new 20.x+ versions.
@@ -120,4 +115,3 @@ class BotDJ(TelegramDjangoObject2Json, Bot):
 
         data = self._check_django_localization(data)
         return await super()._do_post(endpoint, data, *args, **kwargs)
-

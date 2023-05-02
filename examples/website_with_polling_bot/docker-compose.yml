@@ -1,0 +1,96 @@
+version: '2.4'
+
+services:
+  postgres:
+      build: website_with_polling_bot/configs/confs/postgres
+      restart: unless-stopped
+      command: postgres -c logging_collector=on -c log_destination=stderr -c log_directory=/var/lib/postgresql/data/logs -c log_rotation_age=1440 -c log_rotation_size=0 -c log_filename='postgresql-%d.log'
+      ports:
+        - ${DB_PORT}:5432
+      volumes:
+        - ../mounts/postgres_data:/var/lib/postgresql/data
+        - ../mounts/postgres_backups:/backups
+      environment:
+        PGDATA: /var/lib/postgresql/data
+        POSTGRES_HOST: ${DB_HOST}
+        POSTGRES_PORT: 5432
+        POSTGRES_DB: ${DB_NAME}
+        POSTGRES_USER: ${DB_USER}
+        POSTGRES_PASSWORD: ${DB_PASSWORD}
+      env_file:
+        - .env
+
+  master_bot:
+    command: /commands/master_bot.sh
+    extends:
+      file: common.yml
+      service: web_base
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+#      - redis
+#
+
+  web:
+    command: /commands/admin.sh
+    extends:
+      file: common.yml
+      service: web_base
+    ports:
+      - 8001:80
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+#      - redis
+
+
+  redis:
+    image: redis:6.2.1
+    restart: unless-stopped
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ../mounts/redis/:/data
+
+  celery_main:
+    extends:
+      file: common.yml
+      service: web_celery_base
+    command: /commands/celery_main.sh
+    depends_on:
+      - redis
+
+  celery_beat:
+    extends:
+      file: common.yml
+      service: web_celery_base
+    command: /commands/celery_beat.sh
+    depends_on:
+      - redis
+
+#  flower:
+#    extends:
+#      service: web
+#    depends_on:
+#      - celery_main
+#      - celery_beat
+##    volumes:
+##      - ./mounts/flower_data:/webapp/flower
+#    command: /commands/flower.sh
+
+
+#
+#  nginx:
+#    build: ./configs/nginx
+#    restart: unless-stopped
+#    ports:
+#      - 7501:80
+#    volumes:
+#      - ../mounts/logs/nginx:/var/log/nginx
+#      - ../mounts/media:/webapp/media:ro
+#      - ../mounts/static:/webapp/static:ro
+#      - ../mounts/uwsgi:/uwsgi
+
+

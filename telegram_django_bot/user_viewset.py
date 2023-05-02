@@ -7,7 +7,6 @@ from .forms import TelegramModelForm, BaseModelForm, BaseTelegramForm
 from .td_viewset import TelegramViewSet
 
 
-
 class UserForm(TelegramModelForm):
     form_name = _('User')
 
@@ -33,7 +32,6 @@ class UserForm(TelegramModelForm):
                 translation.activate(self.user.language_code)
         else:
             BaseTelegramForm.save(self, commit=commit)
-
 
 
 class UserViewSet(TelegramViewSet):
