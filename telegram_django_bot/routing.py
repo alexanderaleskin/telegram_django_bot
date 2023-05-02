@@ -1,7 +1,7 @@
 import logging
 from .models import BotMenuElem
 from .utils import handler_decor
-from .td_viewset import TelegaViewSet
+from .td_viewset import TelegramViewSet
 from django.urls import resolve, Resolver404, reverse
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -20,7 +20,7 @@ except ImportError:
     from telegram.ext import Handler
 
 
-def telega_resolve(path, utrl_conf=None):
+def telegram_resolve(path, utrl_conf=None):
     if path[0] != '/':
         path = f'/{path}'
 
@@ -37,7 +37,7 @@ def telega_resolve(path, utrl_conf=None):
     return resolver_match
 
 
-def telega_reverse(viewname, utrl_conf=None, args=None, kwargs=None, current_app=None):
+def telegram_reverse(viewname, utrl_conf=None, args=None, kwargs=None, current_app=None):
     if utrl_conf is None:
         utrl_conf = settings.TELEGRAM_ROOT_UTRLCONF
 
@@ -93,9 +93,9 @@ class RouterCallbackMessageCommandHandler(Handler):
         callback_func = None
         # check if utrls
         if update.callback_query:
-            callback_func = telega_resolve(update.callback_query.data, self.utrl_conf)
+            callback_func = telegram_resolve(update.callback_query.data, self.utrl_conf)
         elif update.message and update.message.text and update.message.text[0] == '/':  # is it ok? seems message couldnt be an url
-            callback_func = telega_resolve(update.message.text, self.utrl_conf)
+            callback_func = telegram_resolve(update.message.text, self.utrl_conf)
 
         if callback_func is None:
             # update.message -- could be data or info for managing, command could not be a data, it is managing info
@@ -106,7 +106,7 @@ class RouterCallbackMessageCommandHandler(Handler):
                 if user:
                     logging.info(f'user.current_utrl {user.current_utrl}')
                     if user.current_utrl:
-                        callback_func = telega_resolve(user.current_utrl, self.utrl_conf)
+                        callback_func = telegram_resolve(user.current_utrl, self.utrl_conf)
         return callback_func
 
     def check_update(self, update: object):
@@ -140,7 +140,7 @@ class RouterCallbackMessageCommandHandler(Handler):
         callback_func = self.get_callback_utrl(update)
 
         if not callback_func is None:
-            if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegaViewSet):
+            if inspect.isclass(callback_func.func) and issubclass(callback_func.func, TelegramViewSet):
                 viewset = callback_func.func(callback_func.route)
 
                 decorating = handler_decor(log_type='N',)

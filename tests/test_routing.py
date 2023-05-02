@@ -1,6 +1,6 @@
 import telegram
 
-from telegram_django_bot.routing import telega_resolve, telega_reverse, RouterCallbackMessageCommandHandler
+from telegram_django_bot.routing import telegram_resolve, telegram_reverse, RouterCallbackMessageCommandHandler
 from telegram_django_bot.test import TD_TestCase
 from telegram_django_bot.models import BotMenuElem, ActionLog
 from django.urls.exceptions import NoReverseMatch
@@ -15,46 +15,46 @@ from test_app.views import CategoryViewSet, EntityViewSet
 from test_app.handlers import me
 import unittest
 
-class TestTelegaResolve(TD_TestCase):
+class TestTelegramResolve(TD_TestCase):
     def test_exist(self):
-        res = telega_resolve('cat/se')
+        res = telegram_resolve('cat/se')
         self.assertEqual(CategoryViewSet, res.func)
 
-        res = telega_resolve('/cat/', utrl_conf='test_app.utrls')
+        res = telegram_resolve('/cat/', utrl_conf='test_app.utrls')
         self.assertEqual(CategoryViewSet, res.func)
 
-        res = telega_resolve('cat/up&1&2&3')
+        res = telegram_resolve('cat/up&1&2&3')
         self.assertEqual(CategoryViewSet, res.func)
 
-        res = telega_resolve('ent/cr&some_name&cat/')
+        res = telegram_resolve('ent/cr&some_name&cat/')
         self.assertEqual(EntityViewSet, res.func)
 
-        res = telega_resolve('start')
+        res = telegram_resolve('start')
         self.assertEqual(me, res.func)
 
 
     def test_not_exist(self):
-        self.assertIsNone(telega_resolve('abracadabra'))
-        self.assertIsNone(telega_resolve('cat'))
-        self.assertIsNone(telega_resolve('startstart/'))
+        self.assertIsNone(telegram_resolve('abracadabra'))
+        self.assertIsNone(telegram_resolve('cat'))
+        self.assertIsNone(telegram_resolve('startstart/'))
 
 
 
-class TestTelegaReverse(TD_TestCase):
+class TestTelegramReverse(TD_TestCase):
     def test_exist(self):
-        res = telega_reverse('CategoryViewSet')
+        res = telegram_reverse('CategoryViewSet')
         self.assertEqual('cat/', res)
 
-        res = telega_reverse('EntityViewSet')
+        res = telegram_reverse('EntityViewSet')
         self.assertEqual('ent/', res)
 
-        res = telega_reverse('self_info')
+        res = telegram_reverse('self_info')
         self.assertEqual('me', res)
 
     def test_not_exist(self):
         catched = False
         try:
-            telega_reverse('abracadabra')
+            telegram_reverse('abracadabra')
         except NoReverseMatch:
             catched = True
 

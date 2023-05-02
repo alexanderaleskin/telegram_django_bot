@@ -234,26 +234,26 @@ class TG_DJ_Bot(BotDJ):
                     )
                 else:
                     if message_format == MESSAGE_FORMAT.PHOTO:
-                        telega_func = bot.send_photo
+                        telegram_func = bot.send_photo
                     elif message_format == MESSAGE_FORMAT.AUDIO:
-                        telega_func = bot.send_audio
+                        telegram_func = bot.send_audio
                     elif message_format == MESSAGE_FORMAT.VIDEO:
-                        telega_func = bot.send_video
+                        telegram_func = bot.send_video
                     elif message_format == MESSAGE_FORMAT.GIF:
-                        telega_func = bot.send_animation
+                        telegram_func = bot.send_animation
                     elif message_format == MESSAGE_FORMAT.VIDEO_NOTE:
-                        telega_func = bot.send_video_note
+                        telegram_func = bot.send_video_note
                     elif message_format == MESSAGE_FORMAT.VOICE:
-                        telega_func = bot.send_voice
+                        telegram_func = bot.send_voice
                     elif message_format == MESSAGE_FORMAT.STICKER:
-                        telega_func = bot.send_sticker
+                        telegram_func = bot.send_sticker
                     elif message_format == MESSAGE_FORMAT.LOCATION:
                         raise NotImplementedError()
                     # elif message_format == MESSAGE_FORMAT.DOCUMENT:
                     else:
-                        telega_func = bot.send_document
+                        telegram_func = bot.send_document
 
-                    response = telega_func(
+                    response = telegram_func(
                         chat_id,
                         media_files_list[0],
                         caption=text,
