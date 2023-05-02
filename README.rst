@@ -169,7 +169,7 @@ the requests, to list only those one belonging to an user would be like this:
 
 
     class RequestViewSet(TelegramViewSet):
-        telega_form = RequestForm
+        model_form = RequestForm
         queryset = Request.objects.all()
         viewset_name = 'Request'
 
@@ -424,7 +424,7 @@ in the ``BotMenuElemViewSet``:
 In order to customize the ViewSet, you must specify 3 required attributes:
 
 1. ``viewset_name`` - class name, used to display to telegram users
-2. ``telega_form`` - data form, used to specify which fields of the ORM database model to use in the viewset;
+2. ``model_form`` - data form, used to specify which fields of the ORM database model to use in the viewset;
 3. ``queryset`` - basic query for getting model elements.
 
 
@@ -444,7 +444,7 @@ The ``BotMenuElemViewSet`` is used the following values:
 
     class BotMenuElemViewSet(TelegramViewSet):
         viewset_name = 'BotMenuElem'
-        telega_form = BotMenuElemForm
+        model_form = BotMenuElemForm
         queryset = BotMenuElem.objects.all()
 
 

@@ -463,15 +463,15 @@ class TelegramViewSet(metaclass=TelegramViewSetMetaClass):
         mess = ''
 
         # honor field_order
-        if self.telega_form.field_order is not None:
+        if self.model_form.field_order is not None:
             fields = {}
-            for key in self.telega_form.field_order:
+            for key in self.model_form.field_order:
                 try:
-                    fields[key] = self.telega_form.base_fields.pop(key)
+                    fields[key] = self.model_form.base_fields.pop(key)
                 except KeyError:  # ignore unknown fields
                     pass
-            fields.update(self.telega_form.base_fields)  # add remaining fields in original order
-            self.telega_form.base_fields = fields
+            fields.update(self.model_form.base_fields)  # add remaining fields in original order
+            self.model_form.base_fields = fields
 
         for field_name, field in self.model_form.base_fields.items():
             if type(field.widget) != HiddenInput:
