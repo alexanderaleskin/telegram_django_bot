@@ -81,7 +81,7 @@ class RouterCallbackMessageCommandHandler(Handler):
         # check if utrls
         if update.callback_query:
             callback_func = telegram_resolve(update.callback_query.data, self.utrl_conf)
-        elif update.effective_message.text and update.message.text.startswith('/'):
+        elif update.message and update.message.text and update.message.text.startswith('/'):
             callback_func = telegram_resolve(update.message.text, self.utrl_conf)
 
         if callback_func is None:
